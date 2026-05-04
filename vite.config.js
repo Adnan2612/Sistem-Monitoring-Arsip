@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: "/Sistem-Monitoring-Arsip/", 
+  // base: "/Sistem-Monitoring-Arsip/",  // <-- simpan ini TANPA diaktifkan dulu (comment)
   plugins: [
     react(),
     tailwindcss(),
