@@ -23,7 +23,7 @@ const STD_KELEMBAPAN = { min: 45, max: 55 };
 /* ================= FETCH ================= */
 async function getData() {
   const res = await fetch(
-    `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${API_KEY}&results=1000`
+    `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${API_KEY}&results=8000`
   );
   const json = await res.json();
   return json.feeds || [];
