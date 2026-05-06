@@ -278,17 +278,41 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
     }
   }, [data]);
 
-  /* DATA CHART (grafik suhu & kelembapan) */
-const chartData = data
-  .slice(-20) // 🔥 hanya 20 data terakhir
+// ================= SINKRONISASI BERDASARKAN WAKTU =================
+const syncMap = {};
+
+// loop semua data
+data.forEach((d) => {
+  const timeKey = new Date(d.created_at).toISOString(); // kunci waktu unik
+
+  if (!syncMap[timeKey]) {
+    syncMap[timeKey] = {
+      waktu: formatTime(d.created_at),
+      tanggal: formatDate(d.created_at),
+      suhuAktual: null,
+      suhuPrediksi: null,
+      kelembapanAktual: null,
+      kelembapanPrediksi: null,
+    };
+  }
+
+  if (d.field1) syncMap[timeKey].suhuAktual = parseFloat(d.field1);
+  if (d.field2) syncMap[timeKey].kelembapanAktual = parseFloat(d.field2);
+  if (d.field3) syncMap[timeKey].suhuPrediksi = parseFloat(d.field3);
+  if (d.field4) syncMap[timeKey].kelembapanPrediksi = parseFloat(d.field4);
+});
+
+// ubah jadi array + ambil 20 terakhir
+const chartData = Object.values(syncMap)
+  .slice(-20)
   .map((d, i) => ({
-    index: i + 1, // index aman untuk XAxis
-    waktu: formatTime(d.created_at),
-    tanggal: formatDate(d.created_at),
-    suhuAktual: parseFloat(d.field1) || 0,
-    suhuPrediksi: parseFloat(d.field3) || 0,
-    kelembapanAktual: parseFloat(d.field2) || 0,
-    kelembapanPrediksi: parseFloat(d.field4) || 0,
+    index: i + 1,
+    waktu: d.waktu,
+    tanggal: d.tanggal,
+    suhuAktual: d.suhuAktual ?? null,
+    suhuPrediksi: d.suhuPrediksi ?? null,
+    kelembapanAktual: d.kelembapanAktual ?? null,
+    kelembapanPrediksi: d.kelembapanPrediksi ?? null,
   }));
     /* ================= STATE FILTER & PAGINATION (tabel) ================= */
   const [filterMs, setFilterMs] = useState(0);           // 0 = semua
