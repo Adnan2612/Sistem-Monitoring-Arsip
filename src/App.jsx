@@ -278,41 +278,18 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
     }
   }, [data]);
 
-// ================= SINKRONISASI BERDASARKAN WAKTU =================
-const syncMap = {};
-
-// loop semua data
-data.forEach((d) => {
-  const timeKey = new Date(d.created_at).toISOString(); // kunci waktu unik
-
-  if (!syncMap[timeKey]) {
-    syncMap[timeKey] = {
-      waktu: formatTime(d.created_at),
-      tanggal: formatDate(d.created_at),
-      suhuAktual: null,
-      suhuPrediksi: null,
-      kelembapanAktual: null,
-      kelembapanPrediksi: null,
-    };
-  }
-
-  if (d.field1) syncMap[timeKey].suhuAktual = parseFloat(d.field1);
-  if (d.field2) syncMap[timeKey].kelembapanAktual = parseFloat(d.field2);
-  if (d.field3) syncMap[timeKey].suhuPrediksi = parseFloat(d.field3);
-  if (d.field4) syncMap[timeKey].kelembapanPrediksi = parseFloat(d.field4);
-});
-
-// ubah jadi array + ambil 20 terakhir
-const chartData = Object.values(syncMap)
+const chartData = data
   .slice(-20)
   .map((d, i) => ({
     index: i + 1,
-    waktu: d.waktu,
-    tanggal: d.tanggal,
-    suhuAktual: d.suhuAktual ?? null,
-    suhuPrediksi: d.suhuPrediksi ?? null,
-    kelembapanAktual: d.kelembapanAktual ?? null,
-    kelembapanPrediksi: d.kelembapanPrediksi ?? null,
+    waktu: formatTime(d.created_at),
+    tanggal: formatDate(d.created_at),
+
+    suhuAktual: d.field1 ? parseFloat(d.field1) : null,
+    suhuPrediksi: d.field3 ? parseFloat(d.field3) : null,
+
+    kelembapanAktual: d.field2 ? parseFloat(d.field2) : null,
+    kelembapanPrediksi: d.field4 ? parseFloat(d.field4) : null,
   }));
     /* ================= STATE FILTER & PAGINATION (tabel) ================= */
   const [filterMs, setFilterMs] = useState(0);           // 0 = semua
@@ -613,6 +590,7 @@ const chartData = Object.values(syncMap)
               stroke="#1e40af"
               strokeWidth={3}
               name="Suhu Aktual (°C)"
+              connectNulls={true}
             />
 
             {/* PREDIKSI SUHU */}
@@ -622,6 +600,7 @@ const chartData = Object.values(syncMap)
               strokeDasharray="5 5"
               strokeWidth={3}
               name="Prediksi Suhu (°C)"
+              connectNulls={true}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -659,19 +638,22 @@ const chartData = Object.values(syncMap)
 
             {/* KELEMBAPAN AKTUAL */}
             <Line
-              dataKey="kelembapanAktual"
-              stroke="#1e40af"
+              dataKey="KelembapanAktual"
+              stroke="#dc2626"
+              strokeDasharray="5 5"
               strokeWidth={3}
-              name="Kelembapan Aktual (%)"
+              name="Prediksi Suhu (°C)"
+              connectNulls={true}
             />
 
             {/* PREDIKSI KELEMBAPAN */}
             <Line
-              dataKey="kelembapanPrediksi"
+              dataKey="KelembapanPrediksi"
               stroke="#dc2626"
               strokeDasharray="5 5"
               strokeWidth={3}
-              name="Prediksi Kelembapan (%)"
+              name="Prediksi Suhu (°C)"
+              connectNulls={true}
             />
 
           </LineChart>
