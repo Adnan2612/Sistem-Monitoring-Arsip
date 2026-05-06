@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Legend,
   ResponsiveContainer,
-  Brush,
   ReferenceLine,
 } from "recharts";
 import "./App.css";
@@ -280,7 +279,10 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
   }, [data]);
 
   /* DATA CHART (grafik suhu & kelembapan) */
-  const chartData = data.map((d) => ({
+const chartData = data
+  .slice(-20) // 🔥 hanya 20 data terakhir
+  .map((d, i) => ({
+    index: i + 1, // index aman untuk XAxis
     waktu: formatTime(d.created_at),
     tanggal: formatDate(d.created_at),
     suhuAktual: parseFloat(d.field1) || 0,
@@ -559,7 +561,8 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="waktu"
+              dataKey="index"
+              tickFormatter={(value) => chartData[value - 1]?.waktu || ""}
               tick={{ fontSize: 12 }}
               tickLine={{ stroke: "#94a3b8" }}
             />
@@ -596,8 +599,6 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
               strokeWidth={3}
               name="Prediksi Suhu (°C)"
             />
-
-            <Brush height={25} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -610,7 +611,8 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
-              dataKey="waktu"
+              dataKey="index"
+              tickFormatter={(value) => chartData[value - 1]?.waktu || ""}
               tick={{ fontSize: 12 }}
               tickLine={{ stroke: "#94a3b8" }}
             />
@@ -648,7 +650,6 @@ const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
               name="Prediksi Kelembapan (%)"
             />
 
-            <Brush height={25} />
           </LineChart>
         </ResponsiveContainer>
       </div>
