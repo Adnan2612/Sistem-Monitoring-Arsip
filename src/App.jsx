@@ -268,16 +268,6 @@ const humP = humPredLast.value;
 const suhuTime = suhuAktualLast.time || suhuPredLast.time;
 const humTime = humAktualLast.time || humPredLast.time;
 
-  const humA = parseFloat(last.field2 ?? 0);
-  const humP = (() => {
-    // cari prediksi terakhir yang ada di data
-    for (let i = lastData.length - 1; i >= 0; i--) {
-      const val = parseFloat(lastData[i].field4);
-      if (!isNaN(val)) return val;
-    }
-    return 0;
-  })();
-
   // Status berdasarkan AKTUAL (prioritas)
 const statusSuhu = getStatus(suhuA, STD_SUHU.min, STD_SUHU.max);
 const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
