@@ -235,28 +235,38 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
-  // Ambil data terbaru yang benar‑benar ada
-  const lastData = data.filter((d) => {
-    const sa = parseFloat(d.field1);
-    const sp = parseFloat(d.field3);
-    const ha = parseFloat(d.field2);
-    const hp = parseFloat(d.field4);
-    return !isNaN(sa) || !isNaN(sp) || !isNaN(ha) || !isNaN(hp);
-  });
-
-  const last =
-    lastData.length > 0 ? lastData[lastData.length - 1] : { created_at: "" };
-
-  /* Ambil nilai terakhir yang valid */
-  const suhuA = parseFloat(last.field1 ?? 0);
-  const suhuP = (() => {
-    // cari prediksi terakhir yang ada di data
-    for (let i = lastData.length - 1; i >= 0; i--) {
-      const val = parseFloat(lastData[i].field3);
-      if (!isNaN(val)) return val;
+// ================= EKSTRAK DATA TERAKHIR VALID (AKTUAL & PREDIKSI TERPISAH) =================
+const getLastValid = (field) => {
+  for (let i = data.length - 1; i >= 0; i--) {
+    const val = parseFloat(data[i][field]);
+    if (!isNaN(val) && val !== 0) {
+      return {
+        value: val,
+        time: data[i].created_at,
+        entry: data[i].entry_id
+      };
     }
-    return 0;
-  })();
+  }
+  return { value: 0, time: null, entry: null };
+};
+
+// AKTUAL TERAKHIR VALID (Field 1 & 2)
+const suhuAktualLast = getLastValid('field1');
+const humAktualLast = getLastValid('field2');
+
+// PREDIKSI TERAKHIR VALID (Field 3 & 4)  
+const suhuPredLast = getLastValid('field3');
+const humPredLast = getLastValid('field4');
+
+// Nilai untuk card
+const suhuA = suhuAktualLast.value;
+const suhuP = suhuPredLast.value;
+const humA = humAktualLast.value;
+const humP = humPredLast.value;
+
+// Timestamp untuk card (prioritas aktual, fallback prediksi)
+const suhuTime = suhuAktualLast.time || suhuPredLast.time;
+const humTime = humAktualLast.time || humPredLast.time;
 
   const humA = parseFloat(last.field2 ?? 0);
   const humP = (() => {
@@ -268,8 +278,9 @@ export default function App() {
     return 0;
   })();
 
-  const statusSuhu = getStatus(suhuA, STD_SUHU.min, STD_SUHU.max);
-  const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
+  // Status berdasarkan AKTUAL (prioritas)
+const statusSuhu = getStatus(suhuA, STD_SUHU.min, STD_SUHU.max);
+const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
 
   /* Alert muncul ketika data datang (bukan segera saat mount) */
   useEffect(() => {
@@ -518,37 +529,37 @@ export default function App() {
         />
       )}
 
-      {/* ================= CARD ================= */}
-      <div className="card-grid">
-        <Card
-          title="Suhu Aktual"
-          value={suhuA}
-          unit="°C"
-          status={statusSuhu}
-          waktu={formatTime(last.created_at)}
-        />
-        <Card
-          title="Kelembapan Aktual"
-          value={humA}
-          unit="%"
-          status={statusHum}
-          waktu={formatTime(last.created_at)}
-        />
-        <Card
-          title="Prediksi Suhu"
-          value={suhuP}
-          unit="°C"
-          status={statusSuhu}
-          waktu={formatTime(last.created_at)}
-        />
-        <Card
-          title="Prediksi Kelembapan"
-          value={humP}
-          unit="%"
-          status={statusHum}
-          waktu={formatTime(last.created_at)}
-        />
-      </div>
+{/* ================= CARD ================= */}
+<div className="card-grid">
+  <Card
+    title="Suhu Aktual"
+    value={suhuA}
+    unit="°C"
+    status={getStatus(suhuA, STD_SUHU.min, STD_SUHU.max)}
+    waktu={formatTime(suhuAktualLast.time)}
+  />
+  <Card
+    title="Kelembapan Aktual"
+    value={humA}
+    unit="%"
+    status={getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
+    waktu={formatTime(humAktualLast.time)}
+  />
+  <Card
+    title="Prediksi Suhu"
+    value={suhuP}
+    unit="°C"
+    status={getStatus(suhuP, STD_SUHU.min, STD_SUHU.max)}
+    waktu={formatTime(suhuPredLast.time)}
+  />
+  <Card
+    title="Prediksi Kelembapan"
+    value={humP}
+    unit="%"
+    status={getStatus(humP, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
+    waktu={formatTime(humPredLast.time)}
+  />
+</div>
 
       {/* ================= GRAFIK SUHU ================= */}
       <div className="chart-box">
