@@ -638,7 +638,7 @@ const chartData = data
 
             {/* KELEMBAPAN AKTUAL */}
             <Line
-              dataKey="KelembapanAktual"
+              dataKey="elembapanAktual"
               stroke="#dc2626"
               strokeDasharray="5 5"
               strokeWidth={3}
@@ -648,7 +648,7 @@ const chartData = data
 
             {/* PREDIKSI KELEMBAPAN */}
             <Line
-              dataKey="KelembapanPrediksi"
+              dataKey="kelembapanPrediksi"
               stroke="#dc2626"
               strokeDasharray="5 5"
               strokeWidth={3}
