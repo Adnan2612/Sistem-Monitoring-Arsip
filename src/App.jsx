@@ -638,11 +638,11 @@ const chartData = data
 
             {/* KELEMBAPAN AKTUAL */}
             <Line
-              dataKey="elembapanAktual"
-              stroke="#dc2626"
+              dataKey="kelembapanAktual"
+              stroke="#1e40af"
               strokeDasharray="5 5"
               strokeWidth={3}
-              name="Prediksi Suhu (°C)"
+              name="Kelembapan Aktual (°C)"
               connectNulls={true}
             />
 
@@ -652,7 +652,7 @@ const chartData = data
               stroke="#dc2626"
               strokeDasharray="5 5"
               strokeWidth={3}
-              name="Prediksi Suhu (°C)"
+              name="Prediksi Kelembapan (°C)"
               connectNulls={true}
             />
 
