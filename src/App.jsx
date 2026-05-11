@@ -554,111 +554,161 @@ const chartData = data
   />
 </div>
 
-      {/* ================= GRAFIK SUHU ================= */}
-      <div className="chart-box">
-        <h3>Grafik Suhu</h3>
+{/* ================= GRAFIK SUHU ================= */}
+<div className="chart-box">
+  <h3>Grafik Suhu</h3>
 
-        <ResponsiveContainer width="100%" height={320}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="index"
-              tickFormatter={(value) => chartData[value - 1]?.waktu || ""}
-              tick={{ fontSize: 12 }}
-              tickLine={{ stroke: "#94a3b8" }}
-            />
-            <YAxis
-              label={{
-                value: "Suhu (°C)",
-                angle: -90,
-                position: "insideLeft",
-                offset: 10,
-              }}
-              tick={{ fontSize: 12 }}
-            />
+  <ResponsiveContainer width="100%" height={320}>
+    <LineChart data={chartData}>
+      <CartesianGrid strokeDasharray="3 3" />
 
-            <Tooltip />
-            <Legend />
+      <XAxis
+        dataKey="waktu"
+        tick={{ fontSize: 12, fill: "#1e293b" }}
+        tickLine={{ stroke: "#94a3b8" }}
+        axisLine={{ stroke: "#94a3b8" }}
+      />
 
-            {/* BATAS AMAN */}
-            <ReferenceLine y={18} stroke="green" strokeDasharray="4 4" />
-            <ReferenceLine y={22} stroke="green" strokeDasharray="4 4" />
+      <YAxis
+        label={{
+          value: "Suhu (°C)",
+          angle: -90,
+          position: "insideLeft",
+          offset: 10,
+        }}
+        domain={[0, 50]}
+        ticks={[0, 10, 20, 30, 40, 50]}
+        tick={{ fontSize: 12 }}
+      />
 
-            {/* SUHU AKTUAL */}
-            <Line
-              dataKey="suhuAktual"
-              stroke="#1e40af"
-              strokeWidth={3}
-              name="Suhu Aktual (°C)"
-              connectNulls={true}
-            />
+      <Tooltip
+        labelFormatter={() => ""}
+        formatter={(value, name, props) => {
+          const point = props.payload;
+          const waktu = point.waktu || "-";
+          const suhuAktual = point.suhuAktual == null || isNaN(point.suhuAktual) ? 0 : parseFloat(point.suhuAktual).toFixed(1);
+          const suhuPrediksi = point.suhuPrediksi == null || isNaN(point.suhuPrediksi) ? 0 : parseFloat(point.suhuPrediksi).toFixed(1);
 
-            {/* PREDIKSI SUHU */}
-            <Line
-              dataKey="suhuPrediksi"
-              stroke="#dc2626"
-              strokeDasharray="5 5"
-              strokeWidth={3}
-              name="Prediksi Suhu (°C)"
-              connectNulls={true}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+          if (name === "suhuAktual") {
+            return [suhuAktual, `Waktu: ${waktu} | Suhu Aktual`];
+          }
+          if (name === "suhuPrediksi") {
+            return [suhuPrediksi, `Waktu: ${waktu} | Prediksi Suhu`];
+          }
+          return [value, name];
+        }}
+        contentStyle={{
+          background: "#f8fafc",
+          border: "1px solid #cbd5e1",
+          borderRadius: "6px",
+        }}
+      />
 
-      {/* ================= GRAFIK KELEMBAPAN ================= */}
-      <div className="chart-box">
-        <h3>Grafik Kelembapan (%)</h3>
+      <Legend />
 
-        <ResponsiveContainer width="100%" height={320}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="index"
-              tickFormatter={(value) => chartData[value - 1]?.waktu || ""}
-              tick={{ fontSize: 12 }}
-              tickLine={{ stroke: "#94a3b8" }}
-            />
-            <YAxis
-              label={{
-                value: "Kelembapan (%)",
-                angle: -90,
-                position: "insideLeft",
-                offset: 10,
-              }}
-              tick={{ fontSize: 12 }}
-            />
+      {/* BATAS AMAN */}
+      <ReferenceLine y={STD_SUHU.min} stroke="green" strokeDasharray="4 4" />
+      <ReferenceLine y={STD_SUHU.max} stroke="green" strokeDasharray="4 4" />
 
-            <Tooltip />
-            <Legend />
+      {/* SUHU AKTUAL */}
+      <Line
+        dataKey="suhuAktual"
+        stroke="#1e40af"
+        strokeWidth={3}
+        name="Suhu Aktual (°C)"
+        connectNulls={true}
+      />
 
-            {/* BATAS AMAN */}
-            <ReferenceLine y={45} stroke="green" strokeDasharray="4 4" />
-            <ReferenceLine y={55} stroke="green" strokeDasharray="4 4" />
+      {/* PREDIKSI SUHU */}
+      <Line
+        dataKey="suhuPrediksi"
+        stroke="#dc2626"
+        strokeDasharray="5 5"
+        strokeWidth={3}
+        name="Prediksi Suhu (°C)"
+        connectNulls={true}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
 
-            {/* KELEMBAPAN AKTUAL */}
-            <Line
-              dataKey="kelembapanAktual"
-              stroke="#1e40af"
-              strokeDasharray="5 5"
-              strokeWidth={3}
-              name="Kelembapan Aktual (°C)"
-              connectNulls={true}
-            />
+{/* ================= GRAFIK KELEMBAPAN ================= */}
+<div className="chart-box">
+  <h3>Grafik Kelembapan (%)</h3>
 
-            {/* PREDIKSI KELEMBAPAN */}
-            <Line
-              dataKey="kelembapanPrediksi"
-              stroke="#dc2626"
-              strokeDasharray="5 5"
-              strokeWidth={3}
-              name="Prediksi Kelembapan (°C)"
-              connectNulls={true}
-            />
+  <ResponsiveContainer width="100%" height={320}>
+    <LineChart data={chartData}>
+      <CartesianGrid strokeDasharray="3 3" />
 
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <XAxis
+        dataKey="waktu"
+        tick={{ fontSize: 12, fill: "#1e293b" }}
+        tickLine={{ stroke: "#94a3b8" }}
+        axisLine={{ stroke: "#94a3b8" }}
+      />
+
+      <YAxis
+        label={{
+          value: "Kelembapan (%)",
+          angle: -90,
+          position: "insideLeft",
+          offset: 10,
+        }}
+        domain={[0, 80]}
+        ticks={[0, 50, 60, 70, 80]}
+        tick={{ fontSize: 12 }}
+      />
+
+      <Tooltip
+        labelFormatter={() => ""}
+        formatter={(value, name, props) => {
+          const point = props.payload;
+          const waktu = point.waktu || "-";
+          const kelembapanAktual = point.kelembapanAktual == null || isNaN(point.kelembapanAktual) ? 0 : parseFloat(point.kelembapanAktual).toFixed(1);
+          const kelembapanPrediksi = point.kelembapanPrediksi == null || isNaN(point.kelembapanPrediksi) ? 0 : parseFloat(point.kelembapanPrediksi).toFixed(1);
+
+          if (name === "kelembapanAktual") {
+            return [kelembapanAktual, `Waktu: ${waktu} | Kelembapan Aktual`];
+          }
+          if (name === "kelembapanPrediksi") {
+            return [kelembapanPrediksi, `Waktu: ${waktu} | Prediksi Kelembapan`];
+          }
+          return [value, name];
+        }}
+        contentStyle={{
+          background: "#f8fafc",
+          border: "1px solid #cbd5e1",
+          borderRadius: "6px",
+        }}
+      />
+
+      <Legend />
+
+      {/* BATAS AMAN */}
+      <ReferenceLine y={STD_KELEMBAPAN.min} stroke="green" strokeDasharray="4 4" />
+      <ReferenceLine y={STD_KELEMBAPAN.max} stroke="green" strokeDasharray="4 4" />
+
+      {/* KELEMBAPAN AKTUAL */}
+      <Line
+        dataKey="kelembapanAktual"
+        stroke="#1e40af"
+        strokeWidth={3}
+        name="Kelembapan Aktual (%)"
+        connectNulls={true}
+      />
+
+      {/* PREDIKSI KELEMBAPAN */}
+      <Line
+        dataKey="kelembapanPrediksi"
+        stroke="#dc2626"
+        strokeDasharray="5 5"
+        strokeWidth={3}
+        name="Prediksi Kelembapan (%)"
+        connectNulls={true}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
 
       {/* ================= INFO INTERAKTIF ================= */}
       <div style={{ padding: "20px", textAlign: "center" }}>
