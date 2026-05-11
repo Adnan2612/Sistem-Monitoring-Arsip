@@ -582,27 +582,28 @@ const chartData = data
       />
 
       <Tooltip
-        labelFormatter={() => ""}
-        formatter={(value, name, props) => {
-          const point = props.payload;
-          const waktu = point.waktu || "-";
-          const suhuAktual = point.suhuAktual == null || isNaN(point.suhuAktual) ? 0 : parseFloat(point.suhuAktual).toFixed(1);
-          const suhuPrediksi = point.suhuPrediksi == null || isNaN(point.suhuPrediksi) ? 0 : parseFloat(point.suhuPrediksi).toFixed(1);
+  labelFormatter={() => ""}
+  formatter={(value, name, props) => {
+    const point = props.payload;
+    const waktu = point.waktu || "-";
+    const suhuAktual = point.suhuAktual == null || isNaN(point.suhuAktual) ? 0 : parseFloat(point.suhuAktual).toFixed(1);
+    const suhuPrediksi = point.suhuPrediksi == null || isNaN(point.suhuPrediksi) ? 0 : parseFloat(point.suhuPrediksi).toFixed(1);
 
-          if (name === "suhuAktual") {
-            return [suhuAktual, `Waktu: ${waktu} | Suhu Aktual`];
-          }
-          if (name === "suhuPrediksi") {
-            return [suhuPrediksi, `Waktu: ${waktu} | Prediksi Suhu`];
-          }
-          return [value, name];
-        }}
-        contentStyle={{
-          background: "#f8fafc",
-          border: "1px solid #cbd5e1",
-          borderRadius: "6px",
-        }}
-      />
+    if (name === "suhuAktual" || name === "suhuPrediksi") {
+      return [
+        value,
+        `Waktu: ${waktu}\nSuhu Aktual: ${suhuAktual} °C\nPrediksi Suhu: ${suhuPrediksi} °C`,
+      ];
+    }
+    return [value, name];
+  }}
+  contentStyle={{
+    background: "#f8fafc",
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    whiteSpace: "pre-line",
+  }}
+/>
 
       <Legend />
 
@@ -660,27 +661,28 @@ const chartData = data
       />
 
       <Tooltip
-        labelFormatter={() => ""}
-        formatter={(value, name, props) => {
-          const point = props.payload;
-          const waktu = point.waktu || "-";
-          const kelembapanAktual = point.kelembapanAktual == null || isNaN(point.kelembapanAktual) ? 0 : parseFloat(point.kelembapanAktual).toFixed(1);
-          const kelembapanPrediksi = point.kelembapanPrediksi == null || isNaN(point.kelembapanPrediksi) ? 0 : parseFloat(point.kelembapanPrediksi).toFixed(1);
+  labelFormatter={() => ""}
+  formatter={(value, name, props) => {
+    const point = props.payload;
+    const waktu = point.waktu || "-";
+    const kelembapanAktual = point.kelembapanAktual == null || isNaN(point.kelembapanAktual) ? 0 : parseFloat(point.kelembapanAktual).toFixed(1);
+    const kelembapanPrediksi = point.kelembapanPrediksi == null || isNaN(point.kelembapanPrediksi) ? 0 : parseFloat(point.kelembapanPrediksi).toFixed(1);
 
-          if (name === "kelembapanAktual") {
-            return [kelembapanAktual, `Waktu: ${waktu} | Kelembapan Aktual`];
-          }
-          if (name === "kelembapanPrediksi") {
-            return [kelembapanPrediksi, `Waktu: ${waktu} | Prediksi Kelembapan`];
-          }
-          return [value, name];
-        }}
-        contentStyle={{
-          background: "#f8fafc",
-          border: "1px solid #cbd5e1",
-          borderRadius: "6px",
-        }}
-      />
+    if (name === "kelembapanAktual" || name === "kelembapanPrediksi") {
+      return [
+        value,
+        `Waktu: ${waktu}\nKelembapan Aktual: ${kelembapanAktual} %\nPrediksi Kelembapan: ${kelembapanPrediksi} %`,
+      ];
+    }
+    return [value, name];
+  }}
+  contentStyle={{
+    background: "#f8fafc",
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    whiteSpace: "pre-line",
+  }}
+/>
 
       <Legend />
 
