@@ -285,11 +285,25 @@ const chartData = data
     waktu: formatTime(d.created_at),
     tanggal: formatDate(d.created_at),
 
-    suhuAktual: d.field1 ? parseFloat(d.field1) : null,
-    suhuPrediksi: d.field3 ? parseFloat(d.field3) : null,
+    suhuAktual:
+      d.field1 && !isNaN(parseFloat(d.field1))
+        ? parseFloat(d.field1)
+        : 0,
 
-    kelembapanAktual: d.field2 ? parseFloat(d.field2) : null,
-    kelembapanPrediksi: d.field4 ? parseFloat(d.field4) : null,
+    suhuPrediksi:
+      d.field3 && !isNaN(parseFloat(d.field3))
+        ? parseFloat(d.field3)
+        : 0,
+
+    kelembapanAktual:
+      d.field2 && !isNaN(parseFloat(d.field2))
+        ? parseFloat(d.field2)
+        : 0,
+
+    kelembapanPrediksi:
+      d.field4 && !isNaN(parseFloat(d.field4))
+        ? parseFloat(d.field4)
+        : 0,
   }));
     /* ================= STATE FILTER & PAGINATION (tabel) ================= */
   const [filterMs, setFilterMs] = useState(0);           // 0 = semua
@@ -582,26 +596,31 @@ const chartData = data
       />
 
       <Tooltip
-  labelFormatter={() => ""}
-  formatter={(value, name, props) => {
-    const point = props.payload;
-    const waktu = point.waktu || "-";
-    const suhuAktual = point.suhuAktual == null || isNaN(point.suhuAktual) ? 0 : parseFloat(point.suhuAktual).toFixed(1);
-    const suhuPrediksi = point.suhuPrediksi == null || isNaN(point.suhuPrediksi) ? 0 : parseFloat(point.suhuPrediksi).toFixed(1);
+  content={({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
 
-    if (name === "suhuAktual" || name === "suhuPrediksi") {
-      return [
-        value,
-        `Waktu: ${waktu}\nSuhu Aktual: ${suhuAktual} °C\nPrediksi Suhu: ${suhuPrediksi} °C`,
-      ];
-    }
-    return [value, name];
-  }}
-  contentStyle={{
-    background: "#f8fafc",
-    border: "1px solid #cbd5e1",
-    borderRadius: "6px",
-    whiteSpace: "pre-line",
+    const data = payload[0].payload;
+
+    return (
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #cbd5e1",
+          padding: "10px",
+          borderRadius: "8px",
+        }}
+      >
+        <p><b>Waktu:</b> {data.waktu}</p>
+
+        <p style={{ color: "#1e40af" }}>
+          Suhu Aktual: {Number(data.suhuAktual || 0).toFixed(1)} °C
+        </p>
+
+        <p style={{ color: "#dc2626" }}>
+          Prediksi Suhu: {Number(data.suhuPrediksi || 0).toFixed(1)} °C
+        </p>
+      </div>
+    );
   }}
 />
 
@@ -661,26 +680,31 @@ const chartData = data
       />
 
       <Tooltip
-  labelFormatter={() => ""}
-  formatter={(value, name, props) => {
-    const point = props.payload;
-    const waktu = point.waktu || "-";
-    const kelembapanAktual = point.kelembapanAktual == null || isNaN(point.kelembapanAktual) ? 0 : parseFloat(point.kelembapanAktual).toFixed(1);
-    const kelembapanPrediksi = point.kelembapanPrediksi == null || isNaN(point.kelembapanPrediksi) ? 0 : parseFloat(point.kelembapanPrediksi).toFixed(1);
+  content={({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
 
-    if (name === "kelembapanAktual" || name === "kelembapanPrediksi") {
-      return [
-        value,
-        `Waktu: ${waktu}\nKelembapan Aktual: ${kelembapanAktual} %\nPrediksi Kelembapan: ${kelembapanPrediksi} %`,
-      ];
-    }
-    return [value, name];
-  }}
-  contentStyle={{
-    background: "#f8fafc",
-    border: "1px solid #cbd5e1",
-    borderRadius: "6px",
-    whiteSpace: "pre-line",
+    const data = payload[0].payload;
+
+    return (
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #cbd5e1",
+          padding: "10px",
+          borderRadius: "8px",
+        }}
+      >
+        <p><b>Waktu:</b> {data.waktu}</p>
+
+        <p style={{ color: "#1e40af" }}>
+          Suhu Aktual: {Number(data.suhuAktual || 0).toFixed(1)} °C
+        </p>
+
+        <p style={{ color: "#dc2626" }}>
+          Prediksi Suhu: {Number(data.suhuPrediksi || 0).toFixed(1)} °C
+        </p>
+      </div>
+    );
   }}
 />
 
