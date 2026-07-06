@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   LineChart,
   Line,
@@ -15,7 +15,6 @@ import "./App.css";
 /* ================= CONFIG ================= */
 const CHANNEL_ID = "3324656";
 const API_KEY = "O93KWC71WM5NU2SI";
-
 const STD_SUHU = { min: 18, max: 22 };
 const STD_KELEMBAPAN = { min: 45, max: 55 };
 
@@ -29,15 +28,50 @@ async function getData() {
 }
 
 /* ================= FORMAT ================= */
-function formatTime(date) {
+function formatTimeSlot(date) {
   if (!date) return "-";
   return new Date(date).toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
   });
 }
+function groupByTimeSlot(feeds) {
+  const grouped = {};
 
+  feeds.forEach((d) => {
+    const date = new Date(d.created_at);
+
+    // slot per 1 jam
+    date.setMinutes(0, 0, 0);
+
+    const key = date.toISOString();
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        created_at: key,
+        field1: null,
+        field2: null,
+        field3: null,
+        field4: null,
+      };
+    }
+
+    // simpan nilai terakhir pada slot tersebut
+    if (parseFloat(d.field1) > 0)
+      grouped[key].field1 = parseFloat(d.field1);
+
+    if (parseFloat(d.field2) > 0)
+      grouped[key].field2 = parseFloat(d.field2);
+
+    if (parseFloat(d.field3) > 0)
+      grouped[key].field3 = parseFloat(d.field3);
+
+    if (parseFloat(d.field4) > 0)
+      grouped[key].field4 = parseFloat(d.field4);
+  });
+
+  return Object.values(grouped);
+}
 function formatDate(date) {
   if (!date) return "-";
   return new Date(date).toLocaleDateString("id-ID");
@@ -47,30 +81,27 @@ function formatDate(date) {
 function getStatus(val, min, max) {
   val = parseFloat(val);
   if (isNaN(val)) return "normal";
-
   if (val >= min && val <= max) return "normal";
   if (val < min - 2 || val > max + 2) return "danger";
   return "warning";
 }
 
+// LABEL BARU sesuai revisi dosen
 function getLabel(status) {
-  if (status === "normal") return "Aman";
-  if (status === "warning") return "Waspada";
-  return "Berbahaya";
+  if (status === "normal") return "Ideal";
+  if (status === "warning") return "Kurang Ideal";
+  return "Tidak Ideal";
 }
 
 /* ================= CARD ================= */
 function Card({ title, value, unit, status, waktu }) {
   const label = getLabel(status);
-
   const safeValue =
     value === null || value === undefined || isNaN(parseFloat(value))
       ? 0
       : parseFloat(value);
-
   let statusColor;
   let bgColor;
-
   if (status === "normal") {
     statusColor = "#16a34a";
     bgColor = "#f0fdf4";
@@ -81,25 +112,16 @@ function Card({ title, value, unit, status, waktu }) {
     statusColor = "#ef4444";
     bgColor = "#fef2f2";
   }
-
   return (
     <div
       className={`card ${status}`}
-      style={{
-        background: bgColor,
-        border: `1px solid ${statusColor}`,
-      }}
+      style={{ background: bgColor, border: `1px solid ${statusColor}` }}
     >
       <p>{title}</p>
-
       <h2 style={{ color: statusColor }}>
         {safeValue.toFixed(1)} {unit}
       </h2>
-
-      <div style={{ fontSize: "12px", color: "#64748b" }}>
-        {waktu || "-"}
-      </div>
-
+      <div style={{ fontSize: "12px", color: "#64748b" }}>{waktu || "-"}</div>
       <div
         style={{
           marginTop: "6px",
@@ -118,37 +140,31 @@ function Card({ title, value, unit, status, waktu }) {
   );
 }
 
-/* ================= ALERT TOAST (AUTO HIDE 5 DETIK) ================= */
+/* ================= ALERT POPUP (MUNCUL SEKALI SAJA) ================= */
 function AlertPopup({ statusSuhu, statusHum, onClose }) {
   if (statusSuhu === "normal" && statusHum === "normal") return null;
 
   let color = "#f59e0b";
   let bgColor = "#fff3bf";
-  let title = "Waspada";
+  let title = "Kurang Ideal";
   let message = "Kondisi ruang arsip mulai keluar dari batas ideal.";
-
   if (statusSuhu === "danger" || statusHum === "danger") {
     color = "#ef4444";
     bgColor = "#fee2e2";
-    title = "Berbahaya";
-    message =
-      "Segera lakukan pengecekan ruangan arsip dan sistem pendingin!";
+    title = "Tidak Ideal";
+    message = "Segera lakukan pengecekan ruangan arsip dan sistem pendingin!";
   }
 
   const labelSuhu = getLabel(statusSuhu);
   const labelHum = getLabel(statusHum);
 
-  // auto close 5 detik jika tidak ada interaksi
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 5000);
+    const timer = setTimeout(() => onClose(), 5000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
     <div
-      className="alert-popup"
       style={{
         position: "fixed",
         top: "85px",
@@ -158,39 +174,29 @@ function AlertPopup({ statusSuhu, statusHum, onClose }) {
         width: "360px",
         background: bgColor,
         borderLeft: `5px solid ${color}`,
-        boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
-        padding: "12px 14px",
+        boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+        padding: "14px 16px",
         borderRadius: "10px",
         zIndex: 1100,
         color: "#201f1f",
         fontSize: "13px",
-        lineHeight: "1.4",
+        lineHeight: "1.5",
       }}
     >
-      <h4
-        style={{
-          margin: "0 0 6px",
-          color,
-          fontWeight: 600,
-          fontSize: "15px",
-        }}
-      >
-        {title}
+      <h4 style={{ margin: "0 0 6px", color, fontWeight: 700, fontSize: "15px" }}>
+        ⚠ {title}
       </h4>
-
       <p style={{ margin: "0 0 8px" }}>{message}</p>
-
-      <ul style={{ paddingLeft: "16px", margin: "0 0 8px", lineHeight: 1.4 }}>
+      <ul style={{ paddingLeft: "16px", margin: "0 0 10px", lineHeight: 1.6 }}>
         <li>Suhu: {labelSuhu}</li>
         <li>Kelembapan: {labelHum}</li>
-        <li>Cek AC / ventilasi.</li>
+        <li>Periksa AC / ventilasi ruangan.</li>
         <li>Pastikan pintu tertutup rapat.</li>
       </ul>
-
       <button
         onClick={onClose}
         style={{
-          padding: "4px 10px",
+          padding: "5px 12px",
           fontSize: "12px",
           borderRadius: "6px",
           border: "none",
@@ -198,13 +204,36 @@ function AlertPopup({ statusSuhu, statusHum, onClose }) {
           color: "#fff",
           cursor: "pointer",
           width: "100%",
-          maxWidth: "280px",
-          marginTop: "4px",
-          marginLeft: 0,
+          fontWeight: 600,
         }}
       >
-        Saya mengerti
+        Saya Mengerti
       </button>
+    </div>
+  );
+}
+
+/* ================= CUSTOM TOOLTIP GRAFIK ================= */
+function CustomTooltipSuhu({ active, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+      <p style={{ margin: "0 0 4px", fontWeight: 600 }}>🕐 {d.waktu}</p>
+      <p style={{ margin: "0 0 2px", color: "#1e40af" }}>Aktual: {Number(d.suhuAktual || 0).toFixed(1)} °C</p>
+      <p style={{ margin: 0, color: "#dc2626" }}>Prediksi: {Number(d.suhuPrediksi || 0).toFixed(1)} °C</p>
+    </div>
+  );
+}
+
+function CustomTooltipHum({ active, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+      <p style={{ margin: "0 0 4px", fontWeight: 600 }}>🕐 {d.waktu}</p>
+      <p style={{ margin: "0 0 2px", color: "#1e40af" }}>Aktual: {Number(d.kelembapanAktual || 0).toFixed(1)} %RH</p>
+      <p style={{ margin: 0, color: "#dc2626" }}>Prediksi: {Number(d.kelembapanPrediksi || 0).toFixed(1)} %RH</p>
     </div>
   );
 }
@@ -213,18 +242,18 @@ function AlertPopup({ statusSuhu, statusHum, onClose }) {
 export default function App() {
   const [data, setData] = useState([]);
   const [time, setTime] = useState(new Date());
-  const [showAlert, setShowAlert] = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
+  // Ref agar alert hanya muncul SEKALI per session (tidak repeat tiap fetch)
+  const alertShownRef = useRef(false);
 
   /* FETCH REALTIME */
   useEffect(() => {
     const fetchLatest = async () => {
-  const d = await getData();
-  console.log("DATA BARU di Thingspeak:", d); // cek di console browser
-  setData(d);
-};
-
+      const d = await getData();
+      setData(d);
+    };
     fetchLatest();
-    const interval = setInterval(fetchLatest, 10000); // 10 detik
+    const interval = setInterval(fetchLatest, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -234,300 +263,231 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
-// ================= EKSTRAK DATA TERAKHIR VALID (AKTUAL & PREDIKSI TERPISAH) =================
-const getLastValid = (field) => {
-  for (let i = data.length - 1; i >= 0; i--) {
-    const val = parseFloat(data[i][field]);
-    if (!isNaN(val) && val !== 0) {
-      return {
-        value: val,
-        time: data[i].created_at,
-        entry: data[i].entry_id
-      };
+  /* ================= EKSTRAK DATA TERAKHIR VALID ================= */
+  const getLastValid = (field) => {
+    for (let i = data.length - 1; i >= 0; i--) {
+      const val = parseFloat(data[i][field]);
+      if (!isNaN(val) && val !== 0) {
+        return { value: val, time: data[i].created_at };
+      }
     }
-  }
-  return { value: 0, time: null, entry: null };
-};
+    return { value: 0, time: null };
+  };
 
-// AKTUAL TERAKHIR VALID (Field 1 & 2)
-const suhuAktualLast = getLastValid('field1');
-const humAktualLast = getLastValid('field2');
+  const suhuAktualLast = getLastValid("field1");
+  const humAktualLast = getLastValid("field2");
+  const suhuPredLast = getLastValid("field3");
+  const humPredLast = getLastValid("field4");
 
-// PREDIKSI TERAKHIR VALID (Field 3 & 4)  
-const suhuPredLast = getLastValid('field3');
-const humPredLast = getLastValid('field4');
+  const suhuA = suhuAktualLast.value;
+  const suhuP = suhuPredLast.value;
+  const humA = humAktualLast.value;
+  const humP = humPredLast.value;
 
-// Nilai untuk card
-const suhuA = suhuAktualLast.value;
-const suhuP = suhuPredLast.value;
-const humA = humAktualLast.value;
-const humP = humPredLast.value;
+  const statusSuhu = getStatus(suhuA, STD_SUHU.min, STD_SUHU.max);
+  const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
 
-// Timestamp untuk card (prioritas aktual, fallback prediksi)
-const suhuTime = suhuAktualLast.time || suhuPredLast.time;
-const humTime = humAktualLast.time || humPredLast.time;
-
-  // Status berdasarkan AKTUAL (prioritas)
-const statusSuhu = getStatus(suhuA, STD_SUHU.min, STD_SUHU.max);
-const statusHum = getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max);
-
-  /* Alert muncul ketika data datang (bukan segera saat mount) */
+  /* Alert hanya muncul SEKALI saat data pertama kali datang */
   useEffect(() => {
-    if (data.length > 0) {
-      setShowAlert(true);
+    if (data.length > 0 && !alertShownRef.current) {
+      if (statusSuhu !== "normal" || statusHum !== "normal") {
+        setShowAlert(true);
+        alertShownRef.current = true;
+      }
     }
-  }, [data]);
+  }, [data, statusSuhu, statusHum]);
 
-const chartData = data
+/* ================= CHART DATA (TIME SLOT 1 JAM) ================= */
+
+// Kelompokkan data berdasarkan jam
+const groupedChart = {};
+
+data.forEach((d) => {
+  const date = new Date(d.created_at);
+
+  // Key untuk grouping (contoh: 2026-07-06 14:00)
+  const key =
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ` +
+    `${String(date.getHours()).padStart(2, "0")}:00`;
+
+  if (!groupedChart[key]) {
+    groupedChart[key] = {
+      waktu: `${String(date.getHours()).padStart(2, "0")}:00`,
+      tanggal: formatDate(date),
+      suhuAktual: null,
+      suhuPrediksi: null,
+      kelembapanAktual: null,
+      kelembapanPrediksi: null,
+      created_at: date,
+    };
+  }
+
+  // Ambil nilai terakhir yang valid pada jam tersebut
+  if (!isNaN(parseFloat(d.field1)) && parseFloat(d.field1) > 0)
+    groupedChart[key].suhuAktual = parseFloat(d.field1);
+
+  if (!isNaN(parseFloat(d.field2)) && parseFloat(d.field2) > 0)
+    groupedChart[key].kelembapanAktual = parseFloat(d.field2);
+
+  if (!isNaN(parseFloat(d.field3)) && parseFloat(d.field3) > 0)
+    groupedChart[key].suhuPrediksi = parseFloat(d.field3);
+
+  if (!isNaN(parseFloat(d.field4)) && parseFloat(d.field4) > 0)
+    groupedChart[key].kelembapanPrediksi = parseFloat(d.field4);
+});
+
+// Ubah menjadi array dan urutkan berdasarkan waktu
+const chartData = Object.values(groupedChart)
+  .sort((a, b) => a.created_at - b.created_at)
   .slice(-20)
   .map((d, i) => ({
     index: i + 1,
-    waktu: formatTime(d.created_at),
-    tanggal: formatDate(d.created_at),
-
-    suhuAktual:
-      d.field1 && !isNaN(parseFloat(d.field1))
-        ? parseFloat(d.field1)
-        : 0,
-
-    suhuPrediksi:
-      d.field3 && !isNaN(parseFloat(d.field3))
-        ? parseFloat(d.field3)
-        : 0,
-
-    kelembapanAktual:
-      d.field2 && !isNaN(parseFloat(d.field2))
-        ? parseFloat(d.field2)
-        : 0,
-
-    kelembapanPrediksi:
-      d.field4 && !isNaN(parseFloat(d.field4))
-        ? parseFloat(d.field4)
-        : 0,
+    waktu: d.waktu,
+    tanggal: d.tanggal,
+    suhuAktual: d.suhuAktual,
+    suhuPrediksi: d.suhuPrediksi,
+    kelembapanAktual: d.kelembapanAktual,
+    kelembapanPrediksi: d.kelembapanPrediksi,
   }));
-    /* ================= STATE FILTER & PAGINATION (tabel) ================= */
-  const [filterMs, setFilterMs] = useState(0);           // 0 = semua
+
+/* ================= DOMAIN Y DINAMIS ================= */
+
+const suhuValues = chartData
+  .flatMap((d) => [d.suhuAktual, d.suhuPrediksi])
+  .filter((v) => v !== null);
+
+const suhuMin = suhuValues.length
+  ? Math.floor(Math.min(...suhuValues)) - 2
+  : 15;
+
+const suhuMax = suhuValues.length
+  ? Math.ceil(Math.max(...suhuValues)) + 2
+  : 45;
+
+const humValues = chartData
+  .flatMap((d) => [d.kelembapanAktual, d.kelembapanPrediksi])
+  .filter((v) => v !== null);
+
+const humMin = humValues.length
+  ? Math.floor(Math.min(...humValues)) - 5
+  : 30;
+
+const humMax = humValues.length
+  ? Math.ceil(Math.max(...humValues)) + 5
+  : 100;
+
+  /* ================= FILTER & PAGINATION ================= */
+  const [filterMs, setFilterMs] = useState(0);
   const [pageSuhu, setPageSuhu] = useState(1);
   const [pageHum, setPageHum] = useState(1);
-
   const ITEMS_PER_PAGE = 20;
 
-  // filter data berdasarkan waktu (1 jam, 1 hari, dst)
-  const filtered = data.filter((d) => {
+  const filtered = groupByTimeSlot(
+  data.filter((d) => {
     const now = new Date();
     const t = new Date(d.created_at);
-    return filterMs <= 0 || now - t <= filterMs;
-  });
 
-  const totalItems = filtered.length;
-  const totalPagesSuhu = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    return filterMs <= 0 || now - t <= filterMs;
+  })
+);
+
+  const totalPagesSuhu = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const startSuhu = (pageSuhu - 1) * ITEMS_PER_PAGE;
   const dataSuhu = filtered.slice(startSuhu, startSuhu + ITEMS_PER_PAGE);
 
-  const totalPagesHum = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const totalPagesHum = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const startHum = (pageHum - 1) * ITEMS_PER_PAGE;
   const dataHum = filtered.slice(startHum, startHum + ITEMS_PER_PAGE);
 
-   /* ================= EXPORT CSV TABEL SUHU (semua data filtered, bukan hanya halaman) ================= */
+  /* ================= EXPORT CSV SUHU ================= */
   const exportSuCSV = () => {
     let csv = "No,Tanggal,Waktu,Suhu Aktual,Prediksi,Selisih,Kondisi\n";
-
     filtered.forEach((d, i) => {
       const sa = parseFloat(d.field1 || 0).toFixed(1);
       const sp = parseFloat(d.field3 || 0).toFixed(1);
       const selisih = (parseFloat(sa) - parseFloat(sp)).toFixed(1);
-      const status = getStatus(parseFloat(sa), 18, 22);
-      const statusText = getLabel(status);
-
-      csv += `${i + 1},${formatDate(d.created_at)},${formatTime(
-        d.created_at
-      )},${sa},${sp},${selisih},${statusText}\n`;
+      const statusText = getLabel(getStatus(parseFloat(sa), 18, 22));
+      csv += `${i + 1},${formatDate(d.created_at)},${formatTimeSlot(d.created_at)},${sa},${sp},${selisih},${statusText}\n`;
     });
-
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = "data_suhu_arsip.csv";
     a.click();
   };
 
-  /* ================= EXPORT CSV TABEL KELEMBAPAN (semua data filtered) ================= */
+  /* ================= EXPORT CSV KELEMBAPAN ================= */
   const exportHumCSV = () => {
     let csv = "No,Tanggal,Waktu,Kelembapan Aktual,Prediksi,Selisih,Kondisi\n";
-
-    // iterasi semua data yang sudah difilter (bukan dataHum per halaman)
     filtered.forEach((d, i) => {
-      const ha = parseFloat(d.kelembapanAktual || 0).toFixed(1);
-      const hp = parseFloat(d.kelembapanPrediksi || 0).toFixed(1);
+      const ha = parseFloat(d.field2 || 0).toFixed(1);
+      const hp = parseFloat(d.field4 || 0).toFixed(1);
       const selisih = (parseFloat(ha) - parseFloat(hp)).toFixed(1);
-      const status = getStatus(parseFloat(ha), 45, 55);
-      const statusText = getLabel(status);
-
-      csv += `${i + 1},${formatDate(d.created_at)},${formatTime(
-        d.created_at
-      )},${ha},${hp},${selisih},${statusText}\n`;
+      const statusText = getLabel(getStatus(parseFloat(ha), 45, 55));
+      csv += `${i + 1},${formatDate(d.created_at)},${formatTimeSlot(d.created_at)},${ha},${hp},${selisih},${statusText}\n`;
     });
-
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = "data_kelembapan_arsip.csv";
     a.click();
   };
 
-    /* ================= EXPORT PDF TABEL SUHU ================= */
+  /* ================= EXPORT PDF SUHU ================= */
   const exportSuhuPDF = () => {
     let tbody = "";
     filtered.forEach((d, i) => {
       const sa = parseFloat(d.field1 || 0).toFixed(1);
       const sp = parseFloat(d.field3 || 0).toFixed(1);
       const selisih = (parseFloat(sa) - parseFloat(sp)).toFixed(1);
-      const status = getStatus(parseFloat(sa), 18, 22);
-      const statusText = getLabel(status);
-
-      tbody += `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${formatDate(d.created_at)}</td>
-          <td>${formatTime(d.created_at)}</td>
-          <td>${sa}</td>
-          <td>${sp}</td>
-          <td>${selisih}</td>
-          <td>${statusText}</td>
-        </tr>
-      `;
+      const statusText = getLabel(getStatus(parseFloat(sa), 18, 22));
+      tbody += `<tr><td>${i + 1}</td><td>${formatDate(d.created_at)}</td><td>${formatTimeSlot(d.created_at)}</td><td>${sa}</td><td>${sp}</td><td>${selisih}</td><td>${statusText}</td></tr>`;
     });
-
     const w = window.open();
-    w.document.write(`
-      <html>
-        <head>
-          <title>Tabel Suhu Arsip</title>
-          <style>
-            body { font-family: "Segoe UI", sans-serif; }
-            table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; text-align: center; }
-            th { background: #16a34a; color: white; }
-          </style>
-        </head>
-        <body>
-          <h2>Tabel Suhu Arsip</h2>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Tanggal</th>
-                <th>Waktu</th>
-                <th>Suhu Aktual</th>
-                <th>Prediksi</th>
-                <th>Selisih</th>
-                <th>Kondisi</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tbody}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
+    w.document.write(`<html><head><title>Tabel Suhu Arsip</title><style>body{font-family:"Segoe UI",sans-serif}table,th,td{border:1px solid #ccc;border-collapse:collapse;padding:8px;text-align:center}th{background:#16a34a;color:white}</style></head><body><h2>Tabel Suhu Arsip</h2><table><thead><tr><th>No</th><th>Tanggal</th><th>Time Slot</th><th>Suhu Aktual (°C)</th><th>Prediksi (°C)</th><th>Selisih</th><th>Kondisi</th></tr></thead><tbody>${tbody}</tbody></table></body></html>`);
     w.document.close();
     w.focus();
     w.print();
     w.close();
   };
 
-  /* ================= EXPORT PDF TABEL KELEMBAPAN ================= */
+  /* ================= EXPORT PDF KELEMBAPAN ================= */
   const exportHumPDF = () => {
     let tbody = "";
     filtered.forEach((d, i) => {
       const ha = parseFloat(d.field2 || 0).toFixed(1);
       const hp = parseFloat(d.field4 || 0).toFixed(1);
       const selisih = (parseFloat(ha) - parseFloat(hp)).toFixed(1);
-      const status = getStatus(parseFloat(ha), 45, 55);
-      const statusText = getLabel(status);
-
-      tbody += `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${formatDate(d.created_at)}</td>
-          <td>${formatTime(d.created_at)}</td>
-          <td>${ha}</td>
-          <td>${hp}</td>
-          <td>${selisih}</td>
-          <td>${statusText}</td>
-        </tr>
-      `;
+      const statusText = getLabel(getStatus(parseFloat(ha), 45, 55));
+      tbody += `<tr><td>${i + 1}</td><td>${formatDate(d.created_at)}</td><td>${formatTimeSlot(d.created_at)}</td><td>${ha}</td><td>${hp}</td><td>${selisih}</td><td>${statusText}</td></tr>`;
     });
-
     const w = window.open();
-    w.document.write(`
-      <html>
-        <head>
-          <title>Tabel Kelembapan Relatif Arsip</title>
-          <style>
-            body { font-family: "Segoe UI", sans-serif; }
-            table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; text-align: center; }
-            th { background: #16a34a; color: white; }
-          </style>
-        </head>
-        <body>
-          <h2>Tabel Kelembapan Relatif Arsip</h2>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Tanggal</th>
-                <th>Waktu</th>
-                <th>Kelembapan Aktual</th>
-                <th>Prediksi</th>
-                <th>Selisih</th>
-                <th>Kondisi</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tbody}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
+    w.document.write(`<html><head><title>Tabel Kelembapan Arsip</title><style>body{font-family:"Segoe UI",sans-serif}table,th,td{border:1px solid #ccc;border-collapse:collapse;padding:8px;text-align:center}th{background:#0369a1;color:white}</style></head><body><h2>Tabel Kelembapan Relatif Arsip</h2><table><thead><tr><th>No</th><th>Tanggal</th><th>Time Slot</th><th>Kelembapan Aktual (%RH)</th><th>Prediksi (%RH)</th><th>Selisih</th><th>Kondisi</th></tr></thead><tbody>${tbody}</tbody></table></body></html>`);
     w.document.close();
     w.focus();
     w.print();
     w.close();
   };
 
+  /* ================= RENDER ================= */
   return (
     <div className="container">
-      {/* ================= HEADER BARU ================= */}
+
+      {/* HEADER */}
       <div className="header-pro">
         <div className="overlay header-overlay">
-          <h1 className="header-title">
-            Sistem Monitoring & Prediksi Mikroklimat
-          </h1>
-
+          <h1 className="header-title">Sistem Monitoring & Prediksi Mikroklimat</h1>
           <div className="header-info">
-            <strong>DEPO | GALERI ARSIP</strong>
-            <br />
-            Dinas Perpustakaan dan Kearsipan
-            <br />
-            Provinsi Kalimantan Barat
-            <br />
+            <strong>DEPO | GALERI ARSIP</strong><br />
+            Dinas Perpustakaan dan Kearsipan<br />
+            Provinsi Kalimantan Barat<br />
             Jalan Sutan Syahrir No.17 Pontianak Kalimantan Barat
           </div>
-
-          {/* WAKTU DI KANAN BAWAH */}
-          <div className="header-time">
-            {time.toLocaleString("id-ID")}
-          </div>
+          <div className="header-time">{time.toLocaleString("id-ID")}</div>
         </div>
       </div>
 
-      {/* ALERT */}
+      {/* ALERT — muncul sekali saja */}
       {showAlert && (
         <AlertPopup
           statusSuhu={statusSuhu}
@@ -536,253 +496,117 @@ const chartData = data
         />
       )}
 
-{/* ================= CARD ================= */}
-<div className="card-grid">
-  <Card
-    title="Suhu Aktual"
-    value={suhuA}
-    unit="°C"
-    status={getStatus(suhuA, STD_SUHU.min, STD_SUHU.max)}
-    waktu={formatTime(suhuAktualLast.time)}
-  />
-  <Card
-    title="Kelembapan Aktual"
-    value={humA}
-    unit="%"
-    status={getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
-    waktu={formatTime(humAktualLast.time)}
-  />
-  <Card
-    title="Prediksi Suhu"
-    value={suhuP}
-    unit="°C"
-    status={getStatus(suhuP, STD_SUHU.min, STD_SUHU.max)}
-    waktu={formatTime(suhuPredLast.time)}
-  />
-  <Card
-    title="Prediksi Kelembapan"
-    value={humP}
-    unit="%"
-    status={getStatus(humP, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
-    waktu={formatTime(humPredLast.time)}
-  />
-</div>
-
-{/* ================= GRAFIK SUHU ================= */}
-<div className="chart-box">
-  <h3>Grafik Suhu</h3>
-
-  <ResponsiveContainer width="100%" height={320}>
-    <LineChart data={chartData}>
-      <CartesianGrid strokeDasharray="3 3" />
-
-      <XAxis
-        dataKey="waktu"
-        tick={{ fontSize: 12, fill: "#1e293b" }}
-        tickLine={{ stroke: "#94a3b8" }}
-        axisLine={{ stroke: "#94a3b8" }}
-      />
-
-      <YAxis
-        label={{
-          value: "Suhu (°C)",
-          angle: -90,
-          position: "insideLeft",
-          offset: 10,
-        }}
-        domain={[0, 50]}
-        ticks={[0, 10, 20, 30, 40, 50]}
-        tick={{ fontSize: 12 }}
-      />
-
-      <Tooltip
-  content={({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-
-    const data = payload[0].payload;
-
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #cbd5e1",
-          padding: "10px",
-          borderRadius: "8px",
-        }}
-      >
-        <p><b>Waktu:</b> {data.waktu}</p>
-
-        <p style={{ color: "#1e40af" }}>
-          Suhu Aktual: {Number(data.suhuAktual || 0).toFixed(1)} °C
-        </p>
-
-        <p style={{ color: "#dc2626" }}>
-          Prediksi Suhu: {Number(data.suhuPrediksi || 0).toFixed(1)} °C
-        </p>
+      {/* CARD */}
+      <div className="card-grid">
+        <Card title="Suhu Aktual" value={suhuA} unit="°C"
+          status={getStatus(suhuA, STD_SUHU.min, STD_SUHU.max)}
+          waktu={formatTimeSlot(suhuAktualLast.time)} />
+        <Card title="Kelembapan Aktual" value={humA} unit="%RH"
+          status={getStatus(humA, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
+          waktu={formatTimeSlot(humAktualLast.time)} />
+        <Card title="Prediksi Suhu" value={suhuP} unit="°C"
+          status={getStatus(suhuP, STD_SUHU.min, STD_SUHU.max)}
+          waktu={formatTimeSlot(suhuPredLast.time)} />
+        <Card title="Prediksi Kelembapan" value={humP} unit="%RH"
+          status={getStatus(humP, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
+          waktu={formatTimeSlot(humPredLast.time)} />
       </div>
-    );
-  }}
-/>
 
-      <Legend />
-
-      {/* BATAS AMAN */}
-      <ReferenceLine y={STD_SUHU.min} stroke="green" strokeDasharray="4 4" />
-      <ReferenceLine y={STD_SUHU.max} stroke="green" strokeDasharray="4 4" />
-
-      {/* SUHU AKTUAL */}
-      <Line
-        dataKey="suhuAktual"
-        stroke="#1e40af"
-        strokeWidth={3}
-        name="Suhu Aktual (°C)"
-        connectNulls={true}
-      />
-
-      {/* PREDIKSI SUHU */}
-      <Line
-        dataKey="suhuPrediksi"
-        stroke="#dc2626"
-        strokeDasharray="5 5"
-        strokeWidth={3}
-        name="Prediksi Suhu (°C)"
-        connectNulls={true}
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
-
-{/* ================= GRAFIK KELEMBAPAN ================= */}
-<div className="chart-box">
-  <h3>Grafik Kelembapan (%)</h3>
-
-  <ResponsiveContainer width="100%" height={320}>
-    <LineChart data={chartData}>
-      <CartesianGrid strokeDasharray="3 3" />
-
-      <XAxis
-        dataKey="waktu"
-        tick={{ fontSize: 12, fill: "#1e293b" }}
-        tickLine={{ stroke: "#94a3b8" }}
-        axisLine={{ stroke: "#94a3b8" }}
-      />
-
-      <YAxis
-        label={{
-          value: "Kelembapan (%)",
-          angle: -90,
-          position: "insideLeft",
-          offset: 10,
-        }}
-        domain={[0, 80]}
-        ticks={[0, 50, 60, 70, 80]}
-        tick={{ fontSize: 12 }}
-      />
-
-      <Tooltip
-  content={({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-
-    const data = payload[0].payload;
-
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #cbd5e1",
-          padding: "10px",
-          borderRadius: "8px",
-        }}
-      >
-        <p><b>Waktu:</b> {data.waktu}</p>
-
-        <p style={{ color: "#1e40af" }}>
-          Suhu Aktual: {Number(data.suhuAktual || 0).toFixed(1)} °C
-        </p>
-
-        <p style={{ color: "#dc2626" }}>
-          Prediksi Suhu: {Number(data.suhuPrediksi || 0).toFixed(1)} °C
-        </p>
+      {/* GRAFIK SUHU */}
+      <div className="chart-box">
+        <h3>📊 Grafik Suhu (°C)</h3>
+        <ResponsiveContainer width="100%" height={340}>
+          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis
+              dataKey="waktu"
+              tick={{ fontSize: 11, fill: "#475569" }}
+              tickLine={false}
+              axisLine={{ stroke: "#cbd5e1" }}
+              label={{ value: "Time Slot", position: "insideBottomRight", offset: -10, fontSize: 12 }}
+            />
+            <YAxis
+              domain={[suhuMin, suhuMax]}
+              tick={{ fontSize: 11, fill: "#475569" }}
+              tickLine={false}
+              axisLine={{ stroke: "#cbd5e1" }}
+              label={{ value: "Suhu (°C)", angle: -90, position: "insideLeft", offset: 15, fontSize: 12 }}
+            />
+            <Tooltip content={<CustomTooltipSuhu />} />
+            <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "13px" }} />
+            <ReferenceLine y={STD_SUHU.min} stroke="#16a34a" strokeDasharray="5 5" strokeWidth={1.5}
+              label={{ value: "Min Aman (18°C)", position: "insideTopLeft", fontSize: 10, fill: "#16a34a" }} />
+            <ReferenceLine y={STD_SUHU.max} stroke="#16a34a" strokeDasharray="5 5" strokeWidth={1.5}
+              label={{ value: "Maks Aman (22°C)", position: "insideTopLeft", fontSize: 10, fill: "#16a34a" }} />
+            <Line dataKey="suhuAktual" stroke="#1e40af" strokeWidth={2.5}
+              name="Suhu Aktual (°C)" dot={{ r: 3, fill: "#1e40af" }} activeDot={{ r: 5 }} connectNulls />
+            <Line dataKey="suhuPrediksi" stroke="#dc2626" strokeDasharray="6 3" strokeWidth={2.5}
+              name="Prediksi Suhu (°C)" dot={{ r: 3, fill: "#dc2626" }} activeDot={{ r: 5 }} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-    );
-  }}
-/>
 
-      <Legend />
+      {/* GRAFIK KELEMBAPAN */}
+      <div className="chart-box">
+        <h3>💧 Grafik Kelembapan (%RH)</h3>
+        <ResponsiveContainer width="100%" height={340}>
+          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis
+              dataKey="waktu"
+              tick={{ fontSize: 11, fill: "#475569" }}
+              tickLine={false}
+              axisLine={{ stroke: "#cbd5e1" }}
+              label={{ value: "Time Slot", position: "insideBottomRight", offset: -10, fontSize: 12 }}
+            />
+            <YAxis
+              domain={[humMin, humMax]}
+              tick={{ fontSize: 11, fill: "#475569" }}
+              tickLine={false}
+              axisLine={{ stroke: "#cbd5e1" }}
+              label={{ value: "Kelembapan (%RH)", angle: -90, position: "insideLeft", offset: 15, fontSize: 12 }}
+            />
+            <Tooltip content={<CustomTooltipHum />} />
+            <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "13px" }} />
+            <ReferenceLine y={STD_KELEMBAPAN.min} stroke="#0369a1" strokeDasharray="5 5" strokeWidth={1.5}
+              label={{ value: "Min Aman (45%)", position: "insideTopLeft", fontSize: 10, fill: "#0369a1" }} />
+            <ReferenceLine y={STD_KELEMBAPAN.max} stroke="#0369a1" strokeDasharray="5 5" strokeWidth={1.5}
+              label={{ value: "Maks Aman (55%)", position: "insideTopLeft", fontSize: 10, fill: "#0369a1" }} />
+            <Line dataKey="kelembapanAktual" stroke="#1e40af" strokeWidth={2.5}
+              name="Kelembapan Aktual (%RH)" dot={{ r: 3, fill: "#1e40af" }} activeDot={{ r: 5 }} connectNulls />
+            <Line dataKey="kelembapanPrediksi" stroke="#dc2626" strokeDasharray="6 3" strokeWidth={2.5}
+              name="Prediksi Kelembapan (%RH)" dot={{ r: 3, fill: "#dc2626" }} activeDot={{ r: 5 }} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-      {/* BATAS AMAN */}
-      <ReferenceLine y={STD_KELEMBAPAN.min} stroke="green" strokeDasharray="4 4" />
-      <ReferenceLine y={STD_KELEMBAPAN.max} stroke="green" strokeDasharray="4 4" />
-
-      {/* KELEMBAPAN AKTUAL */}
-      <Line
-        dataKey="kelembapanAktual"
-        stroke="#1e40af"
-        strokeWidth={3}
-        name="Kelembapan Aktual (%)"
-        connectNulls={true}
-      />
-
-      {/* PREDIKSI KELEMBAPAN */}
-      <Line
-        dataKey="kelembapanPrediksi"
-        stroke="#dc2626"
-        strokeDasharray="5 5"
-        strokeWidth={3}
-        name="Prediksi Kelembapan (%)"
-        connectNulls={true}
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
-
-      {/* ================= INFO INTERAKTIF ================= */}
+      {/* INFO INTERAKTIF */}
       <div style={{ padding: "20px", textAlign: "center" }}>
         <h4>Informasi Penanganan Kondisi Mikroklimat</h4>
-
         <details>
           <summary style={{ cursor: "pointer", fontWeight: 600 }}>
             Klik untuk melihat tindakan yang perlu dilakukan
           </summary>
-
-          <div style={{ marginTop: "10px", fontSize: "14px" }}>
+          <div style={{ marginTop: "10px", fontSize: "14px", textAlign: "left", maxWidth: "600px", margin: "10px auto 0" }}>
             <p>• Pastikan AC / pendingin ruangan berfungsi normal</p>
             <p>• Periksa ventilasi dan kebocoran udara</p>
             <p>• Gunakan dehumidifier jika kelembapan terlalu tinggi</p>
             <p>• Hindari membuka pintu ruangan arsip terlalu sering</p>
-            <p>• Lakukan pengecekan berkala terhadap sensor dan server</p>
+            <p>• Lakukan pengecekan berkala terhadap sensor dan perangkat sistem</p>
           </div>
         </details>
       </div>
 
-      {/* ================= FILTER WAKTU (POJOK KIRI ATAS) ================= */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "10px",
-          margin: "10px 0 20px",
-          background: "#f8fafc",
-          borderRadius: "8px",
-          padding: "10px 15px",
-        }}
-      >
-        <select
-          value={filterMs}
-          onChange={(e) => {
-            const val = parseInt(e.target.value);
-            setFilterMs(val);
-            setPageSuhu(1);
-            setPageHum(1);
+      {/* FILTER WAKTU */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center",
+        flexWrap: "wrap", gap: "10px", margin: "10px 0 20px",
+        background: "#f8fafc", borderRadius: "8px", padding: "10px 15px" }}>
+        <label style={{ fontWeight: 600, fontSize: "14px" }}>Filter Data:</label>
+        <select value={filterMs} onChange={(e) => {
+            setFilterMs(parseInt(e.target.value));
+            setPageSuhu(1); setPageHum(1);
           }}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "6px",
-            border: "1px solid #cbd5e1",
-          }}
-        >
+          style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}>
           <option value={0}>Semua Data</option>
           <option value={3600000}>1 Jam Terakhir</option>
           <option value={10800000}>3 Jam Terakhir</option>
@@ -797,209 +621,210 @@ const chartData = data
       </div>
 
       {/* ================= TABEL SUHU ================= */}
-      <div className="table-wrapper">
-        <h4 style={{ textAlign: "left", margin: "10px 0 10px 25px" }}>
-          Tabel Suhu
-        </h4>
-        <table id="table-suhu" className="table">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Tanggal</th>
-              <th>Waktu</th>
-              <th>Suhu Aktual</th>
-              <th>Prediksi</th>
-              <th>Selisih</th>
-              <th>Kondisi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dataSuhu.map((d, i) => {
-              const sa = parseFloat(d.field1 || 0).toFixed(1);
-              const sp = parseFloat(d.field3 || 0).toFixed(1);
-              const selisih = (parseFloat(sa) - parseFloat(sp)).toFixed(1);
-              const status = getStatus(parseFloat(sa), 18, 22);
-              const statusText = getLabel(status);
+<div className="table-wrapper">
+  <h4 style={{ textAlign: "left", margin: "10px 0 10px 25px" }}>
+    Tabel Suhu
+  </h4>
 
-              return (
-                <tr key={d.entry_id || i}>
-                  <td>{startSuhu + i + 1}</td>
-                  <td>{formatDate(d.created_at)}</td>
-                  <td>{formatTime(d.created_at)}</td>
-                  <td>{sa}</td>
-                  <td>{sp}</td>
-                  <td>{selisih}</td>
-                  <td>{statusText}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+  <table className="table">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Tanggal</th>
+        <th>Waktu</th>
+        <th>Suhu Aktual (°C)</th>
+        <th>Prediksi (°C)</th>
+        <th>Selisih</th>
+        <th>Kondisi</th>
+      </tr>
+    </thead>
 
-        {/* PAGINATION 1/2/3 (suhu) */}
-        <div className="pagination">
-          {Array.from({ length: totalPagesSuhu }, (_, i) => (
-            <button
-              key={i + 1}
-              className={pageSuhu === i + 1 ? "active" : ""}
-              onClick={() => setPageSuhu(i + 1)}
-              style={{
-                padding: "4px 8px",
-                margin: "0 2px",
-                border: "1px solid #cbd5e1",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
+    <tbody>
+      {chartData.map((d, i) => {
 
-        {/* EXPORT CSV & PDF kanan bawah (suhu) */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "8px",
-            marginTop: "12px",
-          }}
-        >
-          <button
-            onClick={exportSuCSV}
-            className="btn-primary"
-            style={{
-              padding: "4px 10px",
-              fontSize: "12px",
-              borderRadius: "6px",
-            }}
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={exportSuhuPDF}
-            className="btn-primary"
-            style={{
-              padding: "4px 10px",
-              fontSize: "12px",
-              borderRadius: "6px",
-            }}
-          >
-            Export PDF
-          </button>
-        </div>
+        const sa = d.suhuAktual ?? 0;
+        const sp = d.suhuPrediksi ?? 0;
+
+        const selisih = (sa - sp).toFixed(1);
+
+        const status = getStatus(sa, STD_SUHU.min, STD_SUHU.max);
+
+        const statusText = getLabel(status);
+
+        const rowColor =
+          status === "normal"
+            ? "#f0fdf4"
+            : status === "warning"
+            ? "#fff7ed"
+            : "#fef2f2";
+
+        return (
+          <tr key={i} style={{ background: rowColor }}>
+            <td>{i + 1}</td>
+            <td>{d.tanggal}</td>
+            <td>{d.waktu}</td>
+            <td>{sa.toFixed(1)}</td>
+            <td>{sp.toFixed(1)}</td>
+            <td>{selisih}</td>
+            <td style={{ fontWeight: 600 }}>{statusText}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: "8px",
+      marginTop: "12px",
+    }}
+  >
+    <button
+      onClick={exportSuCSV}
+      className="btn-primary"
+      style={{
+        padding: "5px 12px",
+        fontSize: "13px",
+        borderRadius: "6px",
+      }}
+    >
+      Export CSV
+    </button>
+
+    <button
+      onClick={exportSuhuPDF}
+      className="btn-primary"
+      style={{
+        padding: "5px 12px",
+        fontSize: "13px",
+        borderRadius: "6px",
+      }}
+    >
+      Export PDF
+    </button>
+  </div>
+</div>
+
+
+
+
+
+{/* ================= TABEL KELEMBAPAN ================= */}
+
+<div className="table-wrapper">
+
+  <h4 style={{ textAlign: "left", margin: "10px 0 10px 25px" }}>
+    Tabel Kelembapan Relatif
+  </h4>
+
+  <table className="table">
+
+    <thead>
+
+      <tr>
+        <th>No</th>
+        <th>Tanggal</th>
+        <th>Waktu</th>
+        <th>Kelembapan Aktual (%RH)</th>
+        <th>Prediksi (%RH)</th>
+        <th>Selisih</th>
+        <th>Kondisi</th>
+      </tr>
+
+    </thead>
+
+    <tbody>
+
+      {chartData.map((d, i) => {
+
+        const ha = d.kelembapanAktual ?? 0;
+        const hp = d.kelembapanPrediksi ?? 0;
+
+        const selisih = (ha - hp).toFixed(1);
+
+        const status = getStatus(
+          ha,
+          STD_KELEMBAPAN.min,
+          STD_KELEMBAPAN.max
+        );
+
+        const statusText = getLabel(status);
+
+        const rowColor =
+          status === "normal"
+            ? "#f0fdf4"
+            : status === "warning"
+            ? "#fff7ed"
+            : "#fef2f2";
+
+        return (
+          <tr key={i} style={{ background: rowColor }}>
+            <td>{i + 1}</td>
+            <td>{d.tanggal}</td>
+            <td>{d.waktu}</td>
+            <td>{ha.toFixed(1)}</td>
+            <td>{hp.toFixed(1)}</td>
+            <td>{selisih}</td>
+            <td style={{ fontWeight: 600 }}>{statusText}</td>
+          </tr>
+        );
+      })}
+
+    </tbody>
+
+  </table>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: "8px",
+      marginTop: "12px",
+    }}
+  >
+    <button
+      onClick={exportHumCSV}
+      className="btn-primary"
+      style={{
+        padding: "5px 12px",
+        fontSize: "13px",
+        borderRadius: "6px",
+      }}
+    >
+      Export CSV
+    </button>
+
+    <button
+      onClick={exportHumPDF}
+      className="btn-primary"
+      style={{
+        padding: "5px 12px",
+        fontSize: "13px",
+        borderRadius: "6px",
+      }}
+    >
+      Export PDF
+    </button>
+  </div>
+
+</div>
+
+      {/* KETERANGAN KONDISI */}
+      <div style={{ padding: "20px 25px", fontSize: "14px", background: "#f8fafc", margin: "20px", borderRadius: "10px" }}>
+        <h4 style={{ marginBottom: "10px" }}>Keterangan Kondisi Mikroklimat</h4>
+        <p style={{ color: "#16a34a", marginBottom: "6px" }}>
+          🟢 <strong>Ideal:</strong> Suhu 18–22°C | Kelembapan 45–55%RH
+        </p>
+        <p style={{ color: "#f59e0b", marginBottom: "6px" }}>
+          🟡 <strong>Kurang Ideal:</strong> Suhu 16–18°C / 22–24°C | Kelembapan 43–45% / 55–57%RH
+        </p>
+        <p style={{ color: "#ef4444", marginBottom: 0 }}>
+          🔴 <strong>Tidak Ideal:</strong> Suhu &lt;16°C atau &gt;24°C | Kelembapan &lt;43% atau &gt;57%RH
+        </p>
       </div>
 
-        {/* ================= TABEL KELEMBAPAN ================= */}
-        <div className="table-wrapper">
-          <h4 style={{ textAlign: "left", margin: "10px 0 10px 25px" }}>
-            Tabel Kelembapan Relatif
-          </h4>
-          <table id="table-hum" className="table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Tanggal</th>
-                <th>Waktu</th>
-                <th>Kelembapan Aktual</th>
-                <th>Prediksi</th>
-                <th>Selisih</th>
-                <th>Kondisi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dataHum.map((d, i) => {
-                const ha = parseFloat(d.field2 || 0).toFixed(1);
-                const hp = parseFloat(d.field4 || 0).toFixed(1);
-                const selisih = (parseFloat(ha) - parseFloat(hp)).toFixed(1);
-                const status = getStatus(parseFloat(ha), 45, 55);
-                const statusText = getLabel(status);
-
-                return (
-                  <tr key={d.entry_id || i}>
-                    <td>{startHum + i + 1}</td>
-                    <td>{formatDate(d.created_at)}</td>
-                    <td>{formatTime(d.created_at)}</td>
-                    <td>{ha}</td>
-                    <td>{hp}</td>
-                    <td>{selisih}</td>
-                    <td>{statusText}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {/* PAGINATION 1/2/3 (kelembapan) */}
-          <div className="pagination">
-            {Array.from({ length: totalPagesHum }, (_, i) => (
-              <button
-                key={i + 1}
-                className={pageHum === i + 1 ? "active" : ""}
-                onClick={() => setPageHum(i + 1)}
-                style={{
-                  padding: "4px 8px",
-                  margin: "0 2px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-
-          {/* EXPORT CSV & PDF kanan bawah (kelembapan) */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "8px",
-              marginTop: "12px",
-            }}
-          >
-            <button
-              onClick={exportHumCSV}
-              className="btn-primary"
-              style={{
-                padding: "4px 10px",
-                fontSize: "12px",
-                borderRadius: "6px",
-              }}
-            >
-              Export CSV
-            </button>
-            <button
-              onClick={exportHumPDF}
-              className="btn-primary"
-              style={{
-                padding: "4px 10px",
-                fontSize: "12px",
-                borderRadius: "6px",
-              }}
-            >
-              Export PDF
-            </button>
-          </div>
-        </div>
-
-        {/* ================= KETERANGAN ================= */}
-        <div style={{ padding: "20px", fontSize: "14px" }}>
-          <h4>Keterangan Kondisi Mikroklimat</h4>
-
-          <p style={{ color: "#16a34a" }}>
-            Aman: Suhu 18–22°C | Kelembapan 45–55%
-          </p>
-
-          <p style={{ color: "#f59e0b" }}>
-            Waspada: Suhu 15–18°C / 22–24°C | Kelembapan 43–45% / 55–57%
-          </p>
-
-          <p style={{ color: "#ef4444" }}>
-            Berbahaya: Suhu &lt;15 atau &gt;24 | Kelembapan &lt;43 atau &gt;57
-          </p>
-        </div>
-      </div>
-    );
+    </div>
+  );
 }
