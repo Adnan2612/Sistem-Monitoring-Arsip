@@ -331,7 +331,7 @@ data.forEach((d) => {
     };
   }
 
-  // Ambil nilai terakhir yang valid pada jam tersebut
+  // Ambil nilai terakhir yang valid pada 30 menit tersebut
   if (!isNaN(parseFloat(d.field1)) && parseFloat(d.field1) > 0)
     groupedChart[key].suhuAktual = parseFloat(d.field1);
 
@@ -366,11 +366,11 @@ const suhuValues = chartData
   .filter((v) => v !== null);
 
 const suhuMin = suhuValues.length
-  ? Math.floor(Math.min(...suhuValues)) - 2
+  ? Math.min(Math.floor(Math.min(...suhuValues)) - 2, STD_SUHU.min - 2)
   : 15;
 
 const suhuMax = suhuValues.length
-  ? Math.ceil(Math.max(...suhuValues)) + 2
+  ? Math.max(Math.ceil(Math.max(...suhuValues)) + 2, STD_SUHU.max + 2)
   : 45;
 
 const humValues = chartData
@@ -520,41 +520,114 @@ const humMax = humValues.length
           status={getStatus(humP, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
           waktu={formatTimeSlot(humPredLast.time)} />
       </div>
+      
+      {/* ================= GRAFIK SUHU ================= */}
+<div className="chart-box">
+  <h3>📊 Grafik Suhu (°C)</h3>
 
-      {/* GRAFIK SUHU */}
-      <div className="chart-box">
-        <h3>📊 Grafik Suhu (°C)</h3>
-        <ResponsiveContainer width="100%" height={340}>
-          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            
-            <XAxis
-              dataKey="waktu"
-              tick={{ fontSize: 11, fill: "#475569" }}
-              tickLine={false}
-              axisLine={{ stroke: "#cbd5e1" }}
-              label={{ value: "Time Slot", position: "insideBottomRight", offset: -10, fontSize: 12 }}
-            />
-            <YAxis
-              domain={[suhuMin, suhuMax]}
-              tick={{ fontSize: 11, fill: "#475569" }}
-              tickLine={false}
-              axisLine={{ stroke: "#cbd5e1" }}
-              label={{ value: "Suhu (°C)", angle: -90, position: "insideLeft", offset: 15, fontSize: 12 }}
-            />
-            <Tooltip content={<CustomTooltipSuhu />} />
-            <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "13px" }} />
-            <ReferenceLine y={STD_SUHU.min} stroke="#16a34a" strokeDasharray="5 5" strokeWidth={1.5}
-              label={{ value: "Min Aman (18°C)", position: "insideTopLeft", fontSize: 10, fill: "#16a34a" }} />
-            <ReferenceLine y={STD_SUHU.max} stroke="#16a34a" strokeDasharray="5 5" strokeWidth={1.5}
-              label={{ value: "Maks Aman (22°C)", position: "insideTopLeft", fontSize: 10, fill: "#16a34a" }} />
-            <Line dataKey="suhuAktual" stroke="#1e40af" strokeWidth={2.5}
-              name="Suhu Aktual (°C)" dot={{ r: 3, fill: "#1e40af" }} activeDot={{ r: 5 }} connectNulls />
-            <Line dataKey="suhuPrediksi" stroke="#dc2626" strokeDasharray="6 3" strokeWidth={2.5}
-              name="Prediksi Suhu (°C)" dot={{ r: 3, fill: "#dc2626" }} activeDot={{ r: 5 }} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+  <ResponsiveContainer width="100%" height={340}>
+    <LineChart
+      data={chartData}
+      margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+    >
+      <CartesianGrid
+        stroke="#e5e7eb"
+        strokeDasharray="3 3"
+      />
+
+      <XAxis
+        dataKey="waktu"
+        tick={{ fontSize: 11 }}
+        tickLine={false}
+      />
+
+      <YAxis
+        domain={[
+          Math.min(
+            16,
+            ...chartData.map((d) =>
+              Math.min(
+                d.suhuAktual ?? 100,
+                d.suhuPrediksi ?? 100
+              )
+            )
+          ) - 1,
+
+          Math.max(
+            24,
+            ...chartData.map((d) =>
+              Math.max(
+                d.suhuAktual ?? 0,
+                d.suhuPrediksi ?? 0
+              )
+            )
+          ) + 1,
+        ]}
+        tickCount={10}
+        allowDecimals={false}
+      />
+
+      <Tooltip content={<CustomTooltipSuhu />} />
+
+      <Legend />
+
+      {/* BATAS MINIMUM */}
+      <ReferenceLine
+        y={18}
+        stroke="#16a34a"
+        strokeWidth={2.5}
+        strokeDasharray="6 4"
+        ifOverflow="extendDomain"
+        label={{
+          value: "Batas Minimum (18°C)",
+          fill: "#16a34a",
+          fontSize: 11,
+          position: "insideTopLeft",
+        }}
+      />
+
+      {/* BATAS MAKSIMUM */}
+      <ReferenceLine
+        y={22}
+        stroke="#16a34a"
+        strokeWidth={2.5}
+        strokeDasharray="6 4"
+        ifOverflow="extendDomain"
+        label={{
+          value: "Batas Maksimum (22°C)",
+          fill: "#16a34a",
+          fontSize: 11,
+          position: "insideTopLeft",
+        }}
+      />
+
+      {/* SUHU AKTUAL */}
+      <Line
+        type="monotone"
+        dataKey="suhuAktual"
+        name="Suhu Aktual (°C)"
+        stroke="#2563eb"
+        strokeWidth={3}
+        dot={{ r: 3 }}
+        activeDot={{ r: 6 }}
+        connectNulls
+      />
+
+      {/* SUHU PREDIKSI */}
+      <Line
+        type="monotone"
+        dataKey="suhuPrediksi"
+        name="Prediksi Suhu (°C)"
+        stroke="#dc2626"
+        strokeWidth={3}
+        strokeDasharray="6 4"
+        dot={{ r: 3 }}
+        activeDot={{ r: 6 }}
+        connectNulls
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
 
       {/* GRAFIK KELEMBAPAN */}
       <div className="chart-box">
@@ -629,9 +702,10 @@ const humMax = humValues.length
           <option value={2592000000}>1 Bulan Terakhir</option>
         </select>
       </div>
+{/* ================= TABEL SUHU ================= */}
 
-      {/* ================= TABEL SUHU ================= */}
 <div className="table-wrapper">
+
   <h4 style={{ textAlign: "left", margin: "10px 0 10px 25px" }}>
     Tabel Suhu
   </h4>
@@ -650,10 +724,11 @@ const humMax = humValues.length
     </thead>
 
     <tbody>
-      {chartData.map((d, i) => {
 
-        const sa = d.suhuAktual ?? 0;
-        const sp = d.suhuPrediksi ?? 0;
+      {dataSuhu.map((d, i) => {
+
+        const sa = parseFloat(d.field1 || 0);
+        const sp = parseFloat(d.field3 || 0);
 
         const selisih = (sa - sp).toFixed(1);
 
@@ -670,56 +745,80 @@ const humMax = humValues.length
 
         return (
           <tr key={i} style={{ background: rowColor }}>
-            <td>{i + 1}</td>
-            <td>{d.tanggal}</td>
-            <td>{d.waktu}</td>
+            <td>{startSuhu + i + 1}</td>
+            <td>{formatDate(d.created_at)}</td>
+            <td>{formatTimeSlot(d.created_at)}</td>
             <td>{sa.toFixed(1)}</td>
             <td>{sp.toFixed(1)}</td>
             <td>{selisih}</td>
-            <td style={{ fontWeight: 600 }}>{statusText}</td>
+            <td style={{ fontWeight: 600 }}>
+              {statusText}
+            </td>
           </tr>
         );
+
       })}
+
     </tbody>
+
   </table>
 
   <div
     style={{
       display: "flex",
-      justifyContent: "flex-end",
-      gap: "8px",
-      marginTop: "12px",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: "15px",
     }}
   >
-    <button
-      onClick={exportSuCSV}
-      className="btn-primary"
-      style={{
-        padding: "5px 12px",
-        fontSize: "13px",
-        borderRadius: "6px",
-      }}
-    >
-      Export CSV
-    </button>
 
-    <button
-      onClick={exportSuhuPDF}
-      className="btn-primary"
-      style={{
-        padding: "5px 12px",
-        fontSize: "13px",
-        borderRadius: "6px",
-      }}
-    >
-      Export PDF
-    </button>
+    <div>
+
+      <button
+        disabled={pageSuhu === 1}
+        onClick={() => setPageSuhu(pageSuhu - 1)}
+      >
+        ◀ Sebelumnya
+      </button>
+
+      <span style={{ margin: "0 15px" }}>
+        Halaman {pageSuhu} / {totalPagesSuhu}
+      </span>
+
+      <button
+        disabled={pageSuhu === totalPagesSuhu}
+        onClick={() => setPageSuhu(pageSuhu + 1)}
+      >
+        Berikutnya ▶
+      </button>
+
+    </div>
+
+    <div style={{ display: "flex", gap: "8px" }}>
+      <button
+        onClick={exportSuCSV}
+        className="btn-primary"
+      >
+        Export CSV
+      </button>
+
+      <button
+        onClick={exportSuhuPDF}
+        className="btn-primary"
+      >
+        Export PDF
+      </button>
+    </div>
+
   </div>
+
 </div>
 
 
 
 
+
+{/* ================= TABEL KELEMBAPAN ================= */}
 
 {/* ================= TABEL KELEMBAPAN ================= */}
 
@@ -747,10 +846,10 @@ const humMax = humValues.length
 
     <tbody>
 
-      {chartData.map((d, i) => {
+      {dataHum.map((d, i) => {
 
-        const ha = d.kelembapanAktual ?? 0;
-        const hp = d.kelembapanPrediksi ?? 0;
+        const ha = parseFloat(d.field2 || 0);
+        const hp = parseFloat(d.field4 || 0);
 
         const selisih = (ha - hp).toFixed(1);
 
@@ -771,15 +870,18 @@ const humMax = humValues.length
 
         return (
           <tr key={i} style={{ background: rowColor }}>
-            <td>{i + 1}</td>
-            <td>{d.tanggal}</td>
-            <td>{d.waktu}</td>
+            <td>{startHum + i + 1}</td>
+            <td>{formatDate(d.created_at)}</td>
+            <td>{formatTimeSlot(d.created_at)}</td>
             <td>{ha.toFixed(1)}</td>
             <td>{hp.toFixed(1)}</td>
             <td>{selisih}</td>
-            <td style={{ fontWeight: 600 }}>{statusText}</td>
+            <td style={{ fontWeight: 600 }}>
+              {statusText}
+            </td>
           </tr>
         );
+
       })}
 
     </tbody>
@@ -789,34 +891,50 @@ const humMax = humValues.length
   <div
     style={{
       display: "flex",
-      justifyContent: "flex-end",
-      gap: "8px",
-      marginTop: "12px",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: "15px",
     }}
   >
-    <button
-      onClick={exportHumCSV}
-      className="btn-primary"
-      style={{
-        padding: "5px 12px",
-        fontSize: "13px",
-        borderRadius: "6px",
-      }}
-    >
-      Export CSV
-    </button>
 
-    <button
-      onClick={exportHumPDF}
-      className="btn-primary"
-      style={{
-        padding: "5px 12px",
-        fontSize: "13px",
-        borderRadius: "6px",
-      }}
-    >
-      Export PDF
-    </button>
+    <div>
+
+      <button
+        disabled={pageHum === 1}
+        onClick={() => setPageHum(pageHum - 1)}
+      >
+        ◀ Sebelumnya
+      </button>
+
+      <span style={{ margin: "0 15px" }}>
+        Halaman {pageHum} / {totalPagesHum}
+      </span>
+
+      <button
+        disabled={pageHum === totalPagesHum}
+        onClick={() => setPageHum(pageHum + 1)}
+      >
+        Berikutnya ▶
+      </button>
+
+    </div>
+
+    <div style={{ display: "flex", gap: "8px" }}>
+      <button
+        onClick={exportHumCSV}
+        className="btn-primary"
+      >
+        Export CSV
+      </button>
+
+      <button
+        onClick={exportHumPDF}
+        className="btn-primary"
+      >
+        Export PDF
+      </button>
+    </div>
+
   </div>
 
 </div>
