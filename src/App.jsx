@@ -269,21 +269,34 @@ export default function App() {
   }, []);
 
   /* ================= EKSTRAK DATA TERAKHIR VALID ================= */
-  const getLastValid = (field) => {
-    for (let i = data.length - 1; i >= 0; i--) {
-      const val = parseFloat(data[i][field]);
-      if (!isNaN(val) && val !== 0) {
-        return { value: val, time: data[i].created_at };
-      }
+  const getLatestValue = (field) => {
+  if (!data.length) return { value: 0, time: null };
+
+  // waktu selalu dari feed terbaru
+  const latestTime = data[data.length - 1].created_at;
+
+  // cari nilai terakhir yang valid
+  let value = 0;
+
+  for (let i = data.length - 1; i >= 0; i--) {
+    const val = parseFloat(data[i][field]);
+    if (!isNaN(val) && val !== 0) {
+      value = val;
+      break;
     }
-    return { value: 0, time: null };
+  }
+
+  return {
+    value,
+    time: latestTime,
   };
+};
 
-  const suhuAktualLast = getLastValid("field1");
-  const humAktualLast = getLastValid("field2");
-  const suhuPredLast = getLastValid("field3");
-  const humPredLast = getLastValid("field4");
-
+  const suhuAktualLast = getLatestValue("field1");
+  const humAktualLast = getLatestValue("field2");
+  const suhuPredLast = getLatestValue("field3");
+  const humPredLast = getLatestValue("field4");
+ 
   const suhuA = suhuAktualLast.value;
   const suhuP = suhuPredLast.value;
   const humA = humAktualLast.value;
