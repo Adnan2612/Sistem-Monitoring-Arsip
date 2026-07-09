@@ -527,19 +527,7 @@ const humMax = humValues.length
         <ResponsiveContainer width="100%" height={340}>
           <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <ReferenceLine
-    y={18}
-    stroke="#16a34a"
-    strokeWidth={2}
-    strokeDasharray="5 5"
-/>
-
-<ReferenceLine
-    y={22}
-    stroke="#16a34a"
-    strokeWidth={2}
-    strokeDasharray="5 5"
-/>
+            
             <XAxis
               dataKey="waktu"
               tick={{ fontSize: 11, fill: "#475569" }}
