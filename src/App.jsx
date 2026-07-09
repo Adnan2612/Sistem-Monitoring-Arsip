@@ -520,8 +520,8 @@ const humMax = humValues.length
           status={getStatus(humP, STD_KELEMBAPAN.min, STD_KELEMBAPAN.max)}
           waktu={formatTimeSlot(humPredLast.time)} />
       </div>
-      
-      {/* ================= GRAFIK SUHU ================= */}
+
+{/* ================= GRAFIK SUHU ================= */}
 <div className="chart-box">
   <h3>📊 Grafik Suhu (°C)</h3>
 
@@ -530,10 +530,7 @@ const humMax = humValues.length
       data={chartData}
       margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
     >
-      <CartesianGrid
-        stroke="#e5e7eb"
-        strokeDasharray="3 3"
-      />
+      <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
 
       <XAxis
         dataKey="waktu"
@@ -543,16 +540,7 @@ const humMax = humValues.length
 
       <YAxis
         domain={[
-          Math.min(
-            16,
-            ...chartData.map((d) =>
-              Math.min(
-                d.suhuAktual ?? 100,
-                d.suhuPrediksi ?? 100
-              )
-            )
-          ) - 1,
-
+          10,
           Math.max(
             24,
             ...chartData.map((d) =>
@@ -571,7 +559,6 @@ const humMax = humValues.length
 
       <Legend />
 
-      {/* BATAS MINIMUM */}
       <ReferenceLine
         y={18}
         stroke="#16a34a"
@@ -586,7 +573,6 @@ const humMax = humValues.length
         }}
       />
 
-      {/* BATAS MAKSIMUM */}
       <ReferenceLine
         y={22}
         stroke="#16a34a"
@@ -601,7 +587,6 @@ const humMax = humValues.length
         }}
       />
 
-      {/* SUHU AKTUAL */}
       <Line
         type="monotone"
         dataKey="suhuAktual"
@@ -613,7 +598,6 @@ const humMax = humValues.length
         connectNulls
       />
 
-      {/* SUHU PREDIKSI */}
       <Line
         type="monotone"
         dataKey="suhuPrediksi"
@@ -629,39 +613,106 @@ const humMax = humValues.length
   </ResponsiveContainer>
 </div>
 
-      {/* GRAFIK KELEMBAPAN */}
-      <div className="chart-box">
-        <h3>💧 Grafik Kelembapan (%RH)</h3>
-        <ResponsiveContainer width="100%" height={340}>
-          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="waktu"
-              tick={{ fontSize: 11, fill: "#475569" }}
-              tickLine={false}
-              axisLine={{ stroke: "#cbd5e1" }}
-              label={{ value: "Time Slot", position: "insideBottomRight", offset: -10, fontSize: 12 }}
-            />
-            <YAxis
-              domain={[humMin, humMax]}
-              tick={{ fontSize: 11, fill: "#475569" }}
-              tickLine={false}
-              axisLine={{ stroke: "#cbd5e1" }}
-              label={{ value: "Kelembapan (%RH)", angle: -90, position: "insideLeft", offset: 15, fontSize: 12 }}
-            />
-            <Tooltip content={<CustomTooltipHum />} />
-            <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "13px" }} />
-            <ReferenceLine y={STD_KELEMBAPAN.min} stroke="#0369a1" strokeDasharray="5 5" strokeWidth={1.5}
-              label={{ value: "Min Aman (45%)", position: "insideTopLeft", fontSize: 10, fill: "#0369a1" }} />
-            <ReferenceLine y={STD_KELEMBAPAN.max} stroke="#0369a1" strokeDasharray="5 5" strokeWidth={1.5}
-              label={{ value: "Maks Aman (55%)", position: "insideTopLeft", fontSize: 10, fill: "#0369a1" }} />
-            <Line dataKey="kelembapanAktual" stroke="#1e40af" strokeWidth={2.5}
-              name="Kelembapan Aktual (%RH)" dot={{ r: 3, fill: "#1e40af" }} activeDot={{ r: 5 }} connectNulls />
-            <Line dataKey="kelembapanPrediksi" stroke="#dc2626" strokeDasharray="6 3" strokeWidth={2.5}
-              name="Prediksi Kelembapan (%RH)" dot={{ r: 3, fill: "#dc2626" }} activeDot={{ r: 5 }} connectNulls />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+{/* ================= GRAFIK KELEMBAPAN ================= */}
+<div className="chart-box">
+  <h3>💧 Grafik Kelembapan (%RH)</h3>
+
+  <ResponsiveContainer width="100%" height={340}>
+    <LineChart
+      data={chartData}
+      margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+    >
+      <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
+
+      <XAxis
+        dataKey="waktu"
+        tick={{ fontSize: 11 }}
+        tickLine={false}
+      />
+
+      <YAxis
+        domain={[
+          Math.min(
+            35,
+            ...chartData.map((d) =>
+              Math.min(
+                d.kelembapanAktual ?? 100,
+                d.kelembapanPrediksi ?? 100
+              )
+            )
+          ) - 2,
+
+          Math.max(
+            60,
+            ...chartData.map((d) =>
+              Math.max(
+                d.kelembapanAktual ?? 0,
+                d.kelembapanPrediksi ?? 0
+              )
+            )
+          ) + 2,
+        ]}
+        tickCount={10}
+        allowDecimals={false}
+      />
+
+      <Tooltip content={<CustomTooltipHum />} />
+
+      <Legend />
+
+      <ReferenceLine
+        y={45}
+        stroke="#16a34a"
+        strokeWidth={2.5}
+        strokeDasharray="6 4"
+        ifOverflow="extendDomain"
+        label={{
+          value: "Batas Minimum (45%)",
+          fill: "#16a34a",
+          fontSize: 11,
+          position: "insideTopLeft",
+        }}
+      />
+
+      <ReferenceLine
+        y={55}
+        stroke="#16a34a"
+        strokeWidth={2.5}
+        strokeDasharray="6 4"
+        ifOverflow="extendDomain"
+        label={{
+          value: "Batas Maksimum (55%)",
+          fill: "#16a34a",
+          fontSize: 11,
+          position: "insideTopLeft",
+        }}
+      />
+
+      <Line
+        type="monotone"
+        dataKey="kelembapanAktual"
+        name="Kelembapan Aktual (%RH)"
+        stroke="#2563eb"
+        strokeWidth={3}
+        dot={{ r: 3 }}
+        activeDot={{ r: 6 }}
+        connectNulls
+      />
+
+      <Line
+        type="monotone"
+        dataKey="kelembapanPrediksi"
+        name="Prediksi Kelembapan (%RH)"
+        stroke="#dc2626"
+        strokeWidth={3}
+        strokeDasharray="6 4"
+        dot={{ r: 3 }}
+        activeDot={{ r: 6 }}
+        connectNulls
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
 
       {/* INFO INTERAKTIF */}
       <div style={{ padding: "20px", textAlign: "center" }}>
