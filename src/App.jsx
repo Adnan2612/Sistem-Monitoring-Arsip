@@ -41,8 +41,13 @@ function groupByTimeSlot(feeds) {
   feeds.forEach((d) => {
     const date = new Date(d.created_at);
 
-    // slot per 1 jam
+    // slot per 30 menit
+  const minute = date.getMinutes();
+
+  if (minute < 30)
     date.setMinutes(0, 0, 0);
+  else
+    date.setMinutes(30, 0, 0);
 
     const key = date.toISOString();
 
@@ -305,14 +310,18 @@ const groupedChart = {};
 data.forEach((d) => {
   const date = new Date(d.created_at);
 
-  // Key untuk grouping (contoh: 2026-07-06 14:00)
+ const slotMinute = date.getMinutes() < 30 ? "00" : "30";
+
   const key =
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ` +
-    `${String(date.getHours()).padStart(2, "0")}:00`;
+`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")} `
++`${String(date.getHours()).padStart(2,"0")}:${slotMinute}`;
 
   if (!groupedChart[key]) {
     groupedChart[key] = {
-      waktu: `${String(date.getHours()).padStart(2, "0")}:00`,
+      waktu:
+`     ${String(date.getHours()).padStart(2,"0")}:${
+      date.getMinutes() < 30 ? "00" : "30"
+      }`,
       tanggal: formatDate(date),
       suhuAktual: null,
       suhuPrediksi: null,
@@ -518,6 +527,19 @@ const humMax = humValues.length
         <ResponsiveContainer width="100%" height={340}>
           <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <ReferenceLine
+    y={18}
+    stroke="#16a34a"
+    strokeWidth={2}
+    strokeDasharray="5 5"
+/>
+
+<ReferenceLine
+    y={22}
+    stroke="#16a34a"
+    strokeWidth={2}
+    strokeDasharray="5 5"
+/>
             <XAxis
               dataKey="waktu"
               tick={{ fontSize: 11, fill: "#475569" }}
